@@ -108,8 +108,8 @@ function TrailerPreviewContent({ item, cardRect, onClose }: TrailerPreviewProps)
   // Calculate position
   const previewWidth = 400;
   const previewHeight = 320;
-  const viewportWidth = window.innerWidth;
-  const viewportHeight = window.innerHeight;
+  const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1200;
+  const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 800;
 
   let left = cardRect.left + cardRect.width / 2 - previewWidth / 2;
   let top = cardRect.top - previewHeight - 12;

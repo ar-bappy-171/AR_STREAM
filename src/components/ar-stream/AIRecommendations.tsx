@@ -171,6 +171,7 @@ export function AIRecommendations({
       {!loading && recommendations.map((row) => (
         <ContentRow
           key={`rec-${row.source.type}-${row.source.id}`}
+          sectionId={`rec-${row.source.type}-${row.source.id}`}
           title={`Because you watched ${row.source.title}`}
           items={row.items}
           onItemClick={onItemClick}
@@ -252,6 +253,7 @@ export function FullRecommendationsSection({
       {!loading && recommendations.map((row) => (
         <ContentRow
           key={`rec-full-${row.source.type}-${row.source.id}`}
+          sectionId={`rec-full-${row.source.type}-${row.source.id}`}
           title={`Because you watched ${row.source.title}`}
           items={row.items}
           onItemClick={onItemClick}

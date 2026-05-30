@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useState } from 'react';
 import Image from 'next/image';
 import {
   BarChart3,
@@ -381,9 +381,18 @@ function RecentlyFinishedList({ items }: { items: WatchListItem[] }) {
 // ─── Main Component ─────────────────────────────────────────────────
 
 export default function DashboardSection() {
-  const watchListItems = useMemo(() => getWatchList(), []);
-  const continueWatchingItems = useMemo(() => getContinueWatching(), []);
-  const activityLog = useMemo(() => getActivityLog(), []);
+  const [watchListItems] = useState(() => {
+    if (typeof window === 'undefined') return [] as ReturnType<typeof getWatchList>;
+    return getWatchList();
+  });
+  const [continueWatchingItems] = useState(() => {
+    if (typeof window === 'undefined') return [] as ReturnType<typeof getContinueWatching>;
+    return getContinueWatching();
+  });
+  const [activityLog] = useState(() => {
+    if (typeof window === 'undefined') return [] as ReturnType<typeof getActivityLog>;
+    return getActivityLog();
+  });
 
   // ─── Computed Stats ──────────────────────────────────────────────
   const totalItems = watchListItems.length;

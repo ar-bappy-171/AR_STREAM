@@ -72,3 +72,28 @@ Stage Summary:
 - UX significantly improved with visual season tabs, dual progress bars, and clear actions
 - Per-season data persisted in localStorage via seasonEpisodeCounts
 - Lint clean, compiles successfully
+
+---
+Task ID: 4
+Agent: Main Coordinator
+Task: Fix 7 preview panel issues (console errors/warnings)
+
+Work Log:
+- Fixed EpisodeTracker: useMemo with side effect (updateSeasonEpisodeCounts) → useEffect
+- Fixed EpisodeTracker: moved updateWatchTotals from useState initializer into useEffect (no side effects during render)
+- Fixed AIRecommendations: added missing required sectionId prop to ContentRow (2 places)
+- Fixed DashboardSection: replaced useMemo(() => getWatchList(), []) with useState lazy initializer + typeof window guard
+- Fixed ActivityTimeline: same useState pattern replacing useMemo localStorage reads
+- Fixed ExportImportSection: same useState pattern replacing useMemo localStorage reads
+- Fixed WatchListSection: replaced broken IIFE using getWatchProgress (which returned no totalEpisodes) with getWatchList lookup that includes totalEpisodes
+- Fixed DetailModal: added null check for nextEpisodeToAir.air_date (could create Invalid Date)
+- Fixed DetailModal: genre key now has fallback for undefined id/mal_id
+- Fixed TrailerPreview: added typeof window guard for window.innerWidth/innerHeight
+- Fixed PiPPlayer: kept useState lazy initializer with typeof window guard in getInitialPosition
+
+Stage Summary:
+- All 7+ runtime issues fixed
+- Lint clean (0 errors, 0 warnings)
+- Dev server compiles successfully
+- Hydration mismatches resolved via proper typeof window guards in useState initializers
+- Side effects removed from render phase (useMemo/useState initializer)

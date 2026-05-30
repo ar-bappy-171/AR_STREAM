@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 import type { ContentItem } from '@/lib/store';
 import type { WatchListCategory } from '@/lib/storage';
-import { getWatchProgress } from '@/lib/storage';
+import { getWatchList } from '@/lib/storage';
 import { ContentCard } from './ContentCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -598,16 +598,17 @@ export default function WatchListSection({
                         </span>
                       )}
                       {/* Progress for TV/Anime */}
-                      {(item.type === 'tv' || item.type === 'anime') && (() => {
-                        const progress = getWatchProgress(item.id, item.type);
-                        if (progress && progress.currentEpisode && progress.totalEpisodes) {
-                          const pct = Math.round((progress.currentEpisode / progress.totalEpisodes) * 100);
+                      {(item.type === 'tv' || item.type === 'anime') && item.watchListCategory && (() => {
+                        const wlItems = getWatchList(item.watchListCategory as WatchListCategory);
+                        const wlItem = wlItems.find(i => i.id === item.id && i.type === item.type);
+                        if (wlItem && wlItem.currentEpisode && wlItem.totalEpisodes) {
+                          const pct = Math.round((wlItem.currentEpisode / wlItem.totalEpisodes) * 100);
                           return (
                             <span className="flex items-center gap-1">
                               <span className="inline-block w-12 h-1.5 bg-muted rounded-full overflow-hidden">
                                 <span className="block h-full bg-ars rounded-full" style={{ width: `${pct}%` }} />
                               </span>
-                              <span>S{progress.currentSeason}E{progress.currentEpisode}</span>
+                              <span>S{wlItem.currentSeason}E{wlItem.currentEpisode}</span>
                             </span>
                           );
                         }

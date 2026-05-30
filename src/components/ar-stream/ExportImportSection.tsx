@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import {
   Download,
   Upload,
@@ -45,10 +45,22 @@ export default function ExportImportSection() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Storage stats
-  const storageSize = useMemo(() => getStorageSize(), []);
-  const watchListCount = useMemo(() => getWatchList().length, []);
-  const continueWatchingCount = useMemo(() => getContinueWatching().length, []);
-  const activityLogCount = useMemo(() => getActivityLog().length, []);
+  const [storageSize] = useState(() => {
+    if (typeof window === 'undefined') return { bytes: 0, formatted: '0 B' };
+    return getStorageSize();
+  });
+  const [watchListCount] = useState(() => {
+    if (typeof window === 'undefined') return 0;
+    return getWatchList().length;
+  });
+  const [continueWatchingCount] = useState(() => {
+    if (typeof window === 'undefined') return 0;
+    return getContinueWatching().length;
+  });
+  const [activityLogCount] = useState(() => {
+    if (typeof window === 'undefined') return 0;
+    return getActivityLog().length;
+  });
 
   // ─── Export Handler ──────────────────────────────────────────────
   const handleExport = useCallback(() => {

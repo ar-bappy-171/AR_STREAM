@@ -284,9 +284,18 @@ export default function ActivityTimeline() {
   const [searchQuery, setSearchQuery] = useState('');
   const [confirmClear, setConfirmClear] = useState(false);
 
-  const activityLog = useMemo(() => getActivityLog(), []);
-  const watchListItems = useMemo(() => getWatchList(), []);
-  const continueWatching = useMemo(() => getContinueWatching(), []);
+  const [activityLog] = useState(() => {
+    if (typeof window === 'undefined') return [] as ReturnType<typeof getActivityLog>;
+    return getActivityLog();
+  });
+  const [watchListItems] = useState(() => {
+    if (typeof window === 'undefined') return [] as ReturnType<typeof getWatchList>;
+    return getWatchList();
+  });
+  const [continueWatching] = useState(() => {
+    if (typeof window === 'undefined') return [] as ReturnType<typeof getContinueWatching>;
+    return getContinueWatching();
+  });
 
   // Generate synthetic activity from watchlist + continue watching if no activity log exists
   const allActivity = useMemo(() => {

@@ -685,7 +685,7 @@ export function DetailModal({
                             </span>
                             <div className="flex flex-wrap gap-1.5">
                               {displayData.genres.map((g) => (
-                                <Badge key={'id' in g ? g.id : g.mal_id} variant="secondary" className="text-xs">
+                                <Badge key={('id' in g ? g.id : g.mal_id) ?? `genre-${g.name}`} variant="secondary" className="text-xs">
                                   {g.name}
                                 </Badge>
                               ))}
@@ -809,11 +809,14 @@ export function DetailModal({
                             </span>
                             <p className="text-sm text-foreground font-medium">
                               {displayData.nextEpisodeToAir.name} —{' '}
-                              {new Date(displayData.nextEpisodeToAir.air_date).toLocaleDateString('en-US', {
-                                month: 'short',
-                                day: 'numeric',
-                                year: 'numeric',
-                              })}
+                              {displayData.nextEpisodeToAir.air_date
+                                ? new Date(displayData.nextEpisodeToAir.air_date).toLocaleDateString('en-US', {
+                                    month: 'short',
+                                    day: 'numeric',
+                                    year: 'numeric',
+                                  })
+                                : 'TBA'
+                              }
                             </p>
                           </div>
                         )}

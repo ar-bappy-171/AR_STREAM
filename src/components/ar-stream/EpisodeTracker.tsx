@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
@@ -104,10 +104,6 @@ function getInitialProgress(
   totalEpisodes?: number
 ): ProgressState {
   const progress = getWatchProgress(contentId, contentType);
-  // Update totals if provided
-  if (totalSeasons && totalEpisodes) {
-    updateWatchTotals(contentId, contentType, totalSeasons, totalEpisodes);
-  }
   return {
     currentSeason: progress?.currentSeason || 1,
     currentEpisode: progress?.currentEpisode || 0,
@@ -133,8 +129,11 @@ export default function EpisodeTracker({
     [seasons, totalSeasons, totalEpisodes]
   );
 
-  // Save season map to storage on mount
-  useMemo(() => {
+  // Save season map and totals to storage when they change
+  useEffect(() => {
+    if (totalSeasons && totalEpisodes) {
+      updateWatchTotals(contentId, contentType, totalSeasons, totalEpisodes);
+    }
     if (seasonMap.size > 0) {
       const counts: Record<string, number> = {};
       for (const [sn, count] of seasonMap) {
@@ -142,7 +141,7 @@ export default function EpisodeTracker({
       }
       updateSeasonEpisodeCounts(contentId, contentType, counts);
     }
-  }, [seasonMap, contentId, contentType]);
+  }, [seasonMap, contentId, contentType, totalSeasons, totalEpisodes]);
 
   // Progress state
   const [progressState, setProgressState] = useState(() =>
