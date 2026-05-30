@@ -118,6 +118,84 @@
   --ars-foreground: oklch(0.985 0 0);
 }
 
+/* ─── Color Themes (layer on top of light/dark) ────────────────────── */
+
+/* Ocean Blue — cool blue tones */
+[data-theme="ocean"] {
+  --ars: oklch(0.6 0.2 240);
+  --ars-foreground: oklch(0.985 0 0);
+}
+[data-theme="ocean"] .sidebar-item-active {
+  background: oklch(0.6 0.2 240 / 15%);
+  border-right: 3px solid oklch(0.6 0.2 240);
+}
+:root:not(.dark) [data-theme="ocean"] .content-card:hover {
+  box-shadow: 0 8px 30px oklch(0.6 0.2 240 / 15%);
+}
+.dark [data-theme="ocean"] .content-card:hover {
+  box-shadow: 0 8px 40px oklch(0.6 0.2 240 / 20%);
+}
+.dark [data-theme="ocean"] {
+  --sidebar-primary: oklch(0.6 0.2 240);
+}
+
+/* Forest Green — nature green tones */
+[data-theme="forest"] {
+  --ars: oklch(0.6 0.2 150);
+  --ars-foreground: oklch(0.985 0 0);
+}
+[data-theme="forest"] .sidebar-item-active {
+  background: oklch(0.6 0.2 150 / 15%);
+  border-right: 3px solid oklch(0.6 0.2 150);
+}
+:root:not(.dark) [data-theme="forest"] .content-card:hover {
+  box-shadow: 0 8px 30px oklch(0.6 0.2 150 / 15%);
+}
+.dark [data-theme="forest"] .content-card:hover {
+  box-shadow: 0 8px 40px oklch(0.6 0.2 150 / 20%);
+}
+.dark [data-theme="forest"] {
+  --sidebar-primary: oklch(0.6 0.2 150);
+}
+
+/* Midnight Purple — deep purple tones */
+[data-theme="midnight"] {
+  --ars: oklch(0.6 0.25 300);
+  --ars-foreground: oklch(0.985 0 0);
+}
+[data-theme="midnight"] .sidebar-item-active {
+  background: oklch(0.6 0.25 300 / 15%);
+  border-right: 3px solid oklch(0.6 0.25 300);
+}
+:root:not(.dark) [data-theme="midnight"] .content-card:hover {
+  box-shadow: 0 8px 30px oklch(0.6 0.25 300 / 15%);
+}
+.dark [data-theme="midnight"] .content-card:hover {
+  box-shadow: 0 8px 40px oklch(0.6 0.25 300 / 20%);
+}
+.dark [data-theme="midnight"] {
+  --sidebar-primary: oklch(0.6 0.25 300);
+}
+
+/* Sunset Rose — warm pink/rose tones */
+[data-theme="sunset"] {
+  --ars: oklch(0.65 0.25 10);
+  --ars-foreground: oklch(0.985 0 0);
+}
+[data-theme="sunset"] .sidebar-item-active {
+  background: oklch(0.65 0.25 10 / 15%);
+  border-right: 3px solid oklch(0.65 0.25 10);
+}
+:root:not(.dark) [data-theme="sunset"] .content-card:hover {
+  box-shadow: 0 8px 30px oklch(0.65 0.25 10 / 15%);
+}
+.dark [data-theme="sunset"] .content-card:hover {
+  box-shadow: 0 8px 40px oklch(0.65 0.25 10 / 20%);
+}
+.dark [data-theme="sunset"] {
+  --sidebar-primary: oklch(0.65 0.25 10);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

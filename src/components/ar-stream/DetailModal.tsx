@@ -4,7 +4,9 @@ import { useEffect, useState, useCallback } from 'react';
 import Image from 'next/image';
 import {
   Play,
-  Heart,
+  Eye,
+  ClipboardList,
+  CheckCircle,
   Share2,
   X,
   Star,
@@ -14,6 +16,12 @@ import {
   Tv,
   Globe,
   ExternalLink,
+  ChevronDown,
+  MapPin,
+  Tv2,
+  DollarSign,
+  ShoppingCart,
+  Loader2,
 } from 'lucide-react';
 import {
   Dialog,
@@ -24,7 +32,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ContentCard } from '@/components/ar-stream/ContentCard';
+import { PersonModal } from '@/components/ar-stream/PersonModal';
 import type { ContentDetail, ContentItem } from '@/lib/store';
+import type { WatchListCategory } from '@/lib/storage';
 
 // ─── Image URL helpers ──────────────────────────────────────────────
 const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p';
@@ -157,6 +167,22 @@ interface TmdbSimilarResult {
   genre_ids?: number[];
 }
 
+interface TmdbProvider {
+  provider_id: number;
+  provider_name: string;
+  logo_path: string | null;
+  display_priority?: number;
+}
+
+interface TmdbWatchProviders {
+  link?: string;
+  flatrate?: TmdbProvider[];
+  rent?: TmdbProvider[];
+  buy?: TmdbProvider[];
+  free?: TmdbProvider[];
+  ads?: TmdbProvider[];
+}
+
 // ─── Props ──────────────────────────────────────────────────────────
 
 interface DetailModalProps {
@@ -164,9 +190,11 @@ interface DetailModalProps {
   onClose: () => void;
   content: ContentDetail | null;
   loading?: boolean;
-  onFavoriteToggle?: (item: ContentDetail) => void;
-  isFavorite?: boolean;
+  onWatchListToggle?: (item: ContentDetail, category: WatchListCategory | null) => void;
+  watchListStatus?: WatchListCategory | null;
   onSimilarItemClick?: (item: ContentItem) => void;
+  onPipTrailer?: (key: string, title: string) => void;
+  onWatchProgressUpdate?: () => void;
 }
 
 // ─── Component ──────────────────────────────────────────────────────
@@ -176,9 +204,11 @@ export function DetailModal({
   onClose,
   content,
   loading: externalLoading,
-  onFavoriteToggle,
-  isFavorite,
+  onWatchListToggle,
+  watchListStatus,
   onSimilarItemClick,
+  onPipTrailer,
+  onWatchProgressUpdate,
 }: DetailModalProps) {
   const [detail, setDetail] = useState<ContentDetail | null>(null);
   const [fetching, setFetching] = useState(false);
@@ -186,6 +216,16 @@ export function DetailModal({
   const [trailerKey, setTrailerKey] = useState<string | null>(null);
   const [similar, setSimilar] = useState<ContentItem[]>([]);
   const [showTrailer, setShowTrailer] = useState(false);
+  const [showListDropdown, setShowListDropdown] = useState(false);
+
+  // PersonModal state
+  const [selectedPersonId, setSelectedPersonId] = useState<number | null>(null);
+  const [showPersonModal, setShowPersonModal] = useState(false);
+
+  // Watch providers state
+  const [watchProviders, setWatchProviders] = useState<Record<string, TmdbWatchProviders> | null>(null);
+  const [providersLoading, setProvidersLoading] = useState(false);
+  const [selectedCountry, setSelectedCountry] = useState<string>('US');
 
   const isLoading = externalLoading || fetching;
 
@@ -211,11 +251,12 @@ export function DetailModal({
 
     try {
       // Fetch all data in parallel
-      const [detailRes, creditsRes, videosRes, similarRes] = await Promise.allSettled([
+      const [detailRes, creditsRes, videosRes, similarRes, providersRes] = await Promise.allSettled([
         fetch(`/api/tmdb/${mediaType}/${id}`),
         fetch(`/api/tmdb/${mediaType}/${id}/credits`),
         fetch(`/api/tmdb/${mediaType}/${id}/videos`),
         fetch(`/api/tmdb/${mediaType}/${id}/similar`),
+        fetch(`/api/tmdb/${mediaType}/${id}/watch/providers`),
       ]);
 
       // Process detail response
@@ -303,6 +344,14 @@ export function DetailModal({
         setSimilar(content.similar ?? []);
       }
 
+      // Process watch providers
+      if (providersRes.status === 'fulfilled' && providersRes.value.ok) {
+        const data = await providersRes.value.json();
+        setWatchProviders(data.results || null);
+      } else {
+        setWatchProviders(null);
+      }
+
       setDetail(mergedDetail);
     } catch (err) {
       console.error('Failed to fetch content details:', err);
@@ -323,14 +372,17 @@ export function DetailModal({
       setSimilar([]);
       setShowTrailer(false);
       setFetching(false);
+      setWatchProviders(null);
+      setSelectedCountry('US');
     }
   }, [open, content, fetchDetails]);
 
   // ─── Handlers ────────────────────────────────────────────────────
-  const handleFavoriteToggle = () => {
-    if (detail && onFavoriteToggle) {
-      onFavoriteToggle(detail);
+  const handleWatchListToggle = (category: WatchListCategory | null) => {
+    if (detail && onWatchListToggle) {
+      onWatchListToggle(detail, category);
     }
+    setShowListDropdown(false);
   };
 
   const handleShare = async () => {
@@ -347,475 +399,688 @@ export function DetailModal({
     }
   };
 
+  const handleCastClick = (personId: number) => {
+    setSelectedPersonId(personId);
+    setShowPersonModal(true);
+  };
+
+  // ─── Get providers for selected country ────────────────────────────
+  const countryProviders = watchProviders?.[selectedCountry];
+
   // ─── Display data ────────────────────────────────────────────────
   const displayData = detail || content;
   const TypeIcon = displayData ? getTypeIcon(displayData.type) : Film;
 
   // ─── Render ──────────────────────────────────────────────────────
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent
-        className="slide-up p-0 gap-0 max-w-5xl sm:max-w-5xl w-full sm:w-[95vw]
-          h-[95vh] sm:h-[92vh] rounded-xl border-border/50
-          bg-background/95 backdrop-blur-xl flex flex-col overflow-hidden"
-        showCloseButton={false}
-      >
-        <DialogTitle className="sr-only">
-          {displayData?.title ?? 'Content Details'}
-        </DialogTitle>
+    <>
+      <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+        <DialogContent
+          className="slide-up p-0 gap-0 max-w-5xl sm:max-w-5xl w-full sm:w-[95vw]
+            h-[95vh] sm:h-[92vh] rounded-xl border-border/50
+            bg-background/95 backdrop-blur-xl flex flex-col overflow-hidden"
+          showCloseButton={false}
+        >
+          <DialogTitle className="sr-only">
+            {displayData?.title ?? 'Content Details'}
+          </DialogTitle>
 
-        <div className="relative flex-1 overflow-y-auto overscroll-contain">
-            {/* ─── Close Button ──────────────────────────────────── */}
-            <button
-              onClick={onClose}
-              className="absolute top-3 right-3 z-50 p-2 rounded-full bg-black/50 backdrop-blur-sm
-                text-white hover:bg-black/70 transition-colors"
-              aria-label="Close"
-            >
-              <X className="h-5 w-5" />
-            </button>
+          <div className="relative flex-1 overflow-y-auto overscroll-contain">
+              {/* ─── Close Button ──────────────────────────────────── */}
+              <button
+                onClick={onClose}
+                className="absolute top-3 right-3 z-50 p-2 rounded-full bg-black/50 backdrop-blur-sm
+                  text-white hover:bg-black/70 transition-colors"
+                aria-label="Close"
+              >
+                <X className="h-5 w-5" />
+              </button>
 
-            {/* ─── Hero Section ──────────────────────────────────── */}
-            {isLoading ? (
-              <HeroSkeleton />
-            ) : (
-              <>
-                {/* Backdrop Image */}
-                <div className="relative w-full aspect-[16/9] sm:aspect-[2.2/1] overflow-hidden">
-                  {displayData?.backdropPath ? (
-                    <Image
-                      src={backdropUrl(displayData.backdropPath)}
-                      alt={displayData.title}
-                      fill
-                      sizes="(max-width: 768px) 100vw, 896px"
-                      className="object-cover"
-                      priority
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-muted flex items-center justify-center">
-                      <Film className="h-16 w-16 text-muted-foreground/30" />
-                    </div>
-                  )}
-                  {/* Gradient overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
-                  <div className="absolute inset-0 bg-gradient-to-r from-background/40 to-transparent" />
-                </div>
-
-                {/* Hero Content Overlay */}
-                <div className="relative -mt-24 sm:-mt-32 px-4 sm:px-6 pb-4">
-                  <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
-                    {/* Poster */}
-                    <div className="hidden sm:block flex-shrink-0">
-                      <div className="relative w-[140px] h-[210px] rounded-lg overflow-hidden shadow-2xl ring-1 ring-white/10">
-                        {displayData?.posterPath ? (
-                          <Image
-                            src={posterUrl(displayData.posterPath)}
-                            alt={displayData.title}
-                            fill
-                            sizes="140px"
-                            className="object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-muted flex items-center justify-center">
-                            <Film className="h-8 w-8 text-muted-foreground/30" />
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Title Info */}
-                    <div className="flex-1 pt-2 sm:pt-16 space-y-2">
-                      {/* Type Badge */}
-                      {displayData && (
-                        <span
-                          className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold uppercase rounded-md ${getTypeBadgeClasses(displayData.type)}`}
-                        >
-                          <TypeIcon className="h-3 w-3" />
-                          {getTypeLabel(displayData.type)}
-                        </span>
-                      )}
-
-                      {/* Title */}
-                      <h2 className="text-2xl sm:text-3xl font-bold text-foreground leading-tight">
-                        {displayData?.title}
-                      </h2>
-
-                      {/* Original title (if different) */}
-                      {displayData?.originalTitle && displayData.originalTitle !== displayData.title && (
-                        <p className="text-sm text-muted-foreground italic">
-                          {displayData.originalTitle}
-                        </p>
-                      )}
-
-                      {/* Tagline */}
-                      {displayData?.tagline && (
-                        <p className="text-sm italic text-ars">
-                          &ldquo;{displayData.tagline}&rdquo;
-                        </p>
-                      )}
-
-                      {/* Meta row: Rating, Year, Runtime */}
-                      <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-                        {displayData && displayData.voteAverage > 0 && (
-                          <span className="flex items-center gap-1">
-                            <Star className="h-4 w-4 rating-star fill-current" />
-                            <span className="font-semibold text-foreground">
-                              {displayData.voteAverage.toFixed(1)}
-                            </span>
-                            <span className="text-xs">({displayData.voteCount?.toLocaleString()})</span>
-                          </span>
-                        )}
-                        {displayData?.releaseDate && (
-                          <span className="flex items-center gap-1">
-                            <Calendar className="h-4 w-4" />
-                            {getYear(displayData.releaseDate)}
-                          </span>
-                        )}
-                        {displayData?.runtime ? (
-                          <span className="flex items-center gap-1">
-                            <Clock className="h-4 w-4" />
-                            {formatRuntime(displayData.runtime)}
-                          </span>
-                        ) : displayData?.numberOfEpisodes ? (
-                          <span className="flex items-center gap-1">
-                            <Tv className="h-4 w-4" />
-                            {displayData.numberOfSeasons} Season{displayData.numberOfSeasons > 1 ? 's' : ''} &middot; {displayData.numberOfEpisodes} Episode{displayData.numberOfEpisodes > 1 ? 's' : ''}
-                          </span>
-                        ) : null}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
-
-            {/* ─── Action Buttons Row ──────────────────────────────── */}
-            {!isLoading && displayData && (
-              <div className="px-4 sm:px-6 py-3 flex flex-wrap gap-2">
-                <Button
-                  className="bg-ars hover:bg-ars/90 text-ars-foreground font-semibold"
-                  onClick={() => {
-                    if (trailerKey) {
-                      setShowTrailer(true);
-                    }
-                  }}
-                >
-                  <Play className="h-4 w-4 fill-current" />
-                  {trailerKey ? 'Watch Trailer' : 'Watch Now'}
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={handleFavoriteToggle}
-                  className={isFavorite ? 'border-red-500/50 text-red-500' : ''}
-                >
-                  <Heart
-                    className={`h-4 w-4 ${isFavorite ? 'fill-red-500 text-red-500' : ''}`}
-                  />
-                  {isFavorite ? 'Favorited' : 'Add to Favorites'}
-                </Button>
-                <Button variant="outline" onClick={handleShare}>
-                  <Share2 className="h-4 w-4" />
-                  Share
-                </Button>
-                {displayData.homepage && (
-                  <Button variant="ghost" asChild>
-                    <a href={displayData.homepage} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="h-4 w-4" />
-                      Official Site
-                    </a>
-                  </Button>
-                )}
-              </div>
-            )}
-
-            {/* ─── Content Body ────────────────────────────────────── */}
-            <div className="px-4 sm:px-6 pb-6 space-y-6">
-              {/* Overview / Synopsis */}
+              {/* ─── Hero Section ──────────────────────────────────── */}
               {isLoading ? (
-                <OverviewSkeleton />
+                <HeroSkeleton />
               ) : (
-                displayData?.overview && (
-                  <section>
-                    <h3 className="text-lg font-semibold text-foreground mb-2">Overview</h3>
-                    <p className="text-sm text-muted-foreground leading-relaxed">
-                      {displayData.overview}
-                    </p>
-                  </section>
-                )
-              )}
-
-              {/* Details Grid */}
-              {isLoading ? (
-                <DetailsGridSkeleton />
-              ) : (
-                displayData && (
-                  <section>
-                    <h3 className="text-lg font-semibold text-foreground mb-3">Details</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {/* Genres */}
-                      {displayData.genres && displayData.genres.length > 0 && (
-                        <div className="space-y-1.5">
-                          <span className="text-xs font-medium uppercase text-muted-foreground tracking-wider">
-                            Genres
-                          </span>
-                          <div className="flex flex-wrap gap-1.5">
-                            {displayData.genres.map((g) => (
-                              <Badge key={'id' in g ? g.id : g.mal_id} variant="secondary" className="text-xs">
-                                {g.name}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Status */}
-                      {displayData.status && (
-                        <div className="space-y-1.5">
-                          <span className="text-xs font-medium uppercase text-muted-foreground tracking-wider">
-                            Status
-                          </span>
-                          <p className="text-sm text-foreground font-medium">{displayData.status}</p>
-                        </div>
-                      )}
-
-                      {/* Runtime */}
-                      {displayData.runtime ? (
-                        <div className="space-y-1.5">
-                          <span className="text-xs font-medium uppercase text-muted-foreground tracking-wider">
-                            Runtime
-                          </span>
-                          <p className="text-sm text-foreground font-medium flex items-center gap-1.5">
-                            <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                            {formatRuntime(displayData.runtime)}
-                          </p>
-                        </div>
-                      ) : displayData.numberOfEpisodes ? (
-                        <div className="space-y-1.5">
-                          <span className="text-xs font-medium uppercase text-muted-foreground tracking-wider">
-                            Episodes
-                          </span>
-                          <p className="text-sm text-foreground font-medium">
-                            {displayData.numberOfEpisodes} episode{displayData.numberOfEpisodes > 1 ? 's' : ''}
-                            {displayData.numberOfSeasons && ` across ${displayData.numberOfSeasons} season${displayData.numberOfSeasons > 1 ? 's' : ''}`}
-                          </p>
-                        </div>
-                      ) : null}
-
-                      {/* Release Date */}
-                      {displayData.releaseDate && (
-                        <div className="space-y-1.5">
-                          <span className="text-xs font-medium uppercase text-muted-foreground tracking-wider">
-                            Release Date
-                          </span>
-                          <p className="text-sm text-foreground font-medium flex items-center gap-1.5">
-                            <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                            {new Date(displayData.releaseDate).toLocaleDateString('en-US', {
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric',
-                            })}
-                          </p>
-                        </div>
-                      )}
-
-                      {/* Production Companies */}
-                      {displayData.productionCompanies && displayData.productionCompanies.length > 0 && (
-                        <div className="space-y-1.5 sm:col-span-2">
-                          <span className="text-xs font-medium uppercase text-muted-foreground tracking-wider">
-                            Production
-                          </span>
-                          <div className="flex flex-wrap gap-3">
-                            {displayData.productionCompanies.map((pc) => (
-                              <div key={pc.id} className="flex items-center gap-2">
-                                {pc.logo_path ? (
-                                  <div className="relative w-8 h-8 flex-shrink-0 dark:bg-white/10 rounded p-0.5">
-                                    <Image
-                                      src={logoUrl(pc.logo_path)}
-                                      alt={pc.name}
-                                      width={32}
-                                      height={32}
-                                      className="object-contain"
-                                    />
-                                  </div>
-                                ) : (
-                                  <div className="w-8 h-8 flex-shrink-0 rounded bg-muted flex items-center justify-center">
-                                    <Film className="h-3.5 w-3.5 text-muted-foreground" />
-                                  </div>
-                                )}
-                                <span className="text-sm text-foreground">{pc.name}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Networks (TV Shows) */}
-                      {displayData.type === 'tv' && displayData.networks && displayData.networks.length > 0 && (
-                        <div className="space-y-1.5 sm:col-span-2">
-                          <span className="text-xs font-medium uppercase text-muted-foreground tracking-wider">
-                            Networks
-                          </span>
-                          <div className="flex flex-wrap gap-3">
-                            {displayData.networks.map((net) => (
-                              <div key={net.id} className="flex items-center gap-2">
-                                {net.logo_path ? (
-                                  <div className="relative w-[48px] h-[20px] flex-shrink-0 dark:bg-white/10 rounded p-0.5">
-                                    <Image
-                                      src={logoUrl(net.logo_path)}
-                                      alt={net.name}
-                                      width={48}
-                                      height={20}
-                                      className="object-contain"
-                                    />
-                                  </div>
-                                ) : null}
-                                <span className="text-sm text-foreground">{net.name}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Next Episode (TV Shows) */}
-                      {displayData.type === 'tv' && displayData.nextEpisodeToAir && (
-                        <div className="space-y-1.5 sm:col-span-2">
-                          <span className="text-xs font-medium uppercase text-muted-foreground tracking-wider">
-                            Next Episode
-                          </span>
-                          <p className="text-sm text-foreground font-medium">
-                            {displayData.nextEpisodeToAir.name} —{' '}
-                            {new Date(displayData.nextEpisodeToAir.air_date).toLocaleDateString('en-US', {
-                              month: 'short',
-                              day: 'numeric',
-                              year: 'numeric',
-                            })}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </section>
-                )
-              )}
-
-              {/* ─── Trailer Section ───────────────────────────────── */}
-              {!isLoading && showTrailer && trailerKey && (
-                <section>
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-lg font-semibold text-foreground">Trailer</h3>
-                    <button
-                      onClick={() => setShowTrailer(false)}
-                      className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      Close
-                    </button>
-                  </div>
-                  <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-black">
-                    <iframe
-                      src={`https://www.youtube.com/embed/${trailerKey}?autoplay=1&rel=0`}
-                      title="Trailer"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                      className="absolute inset-0 w-full h-full"
-                    />
-                  </div>
-                </section>
-              )}
-
-              {/* Trailer button if not showing */}
-              {!isLoading && !showTrailer && trailerKey && (
-                <section>
-                  <h3 className="text-lg font-semibold text-foreground mb-2">Trailer</h3>
-                  <button
-                    onClick={() => setShowTrailer(true)}
-                    className="relative w-full aspect-video rounded-lg overflow-hidden bg-muted group cursor-pointer"
-                  >
-                    {displayData?.backdropPath && (
+                <>
+                  {/* Backdrop Image */}
+                  <div className="relative w-full aspect-[16/9] sm:aspect-[2.2/1] overflow-hidden">
+                    {displayData?.backdropPath ? (
                       <Image
                         src={backdropUrl(displayData.backdropPath)}
-                        alt="Trailer thumbnail"
+                        alt={displayData.title}
                         fill
                         sizes="(max-width: 768px) 100vw, 896px"
-                        className="object-cover opacity-60 group-hover:opacity-40 transition-opacity"
+                        className="object-cover"
+                        priority
                       />
-                    )}
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="w-16 h-16 rounded-full bg-ars/90 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                        <Play className="h-7 w-7 text-white fill-white ml-1" />
+                    ) : (
+                      <div className="w-full h-full bg-muted flex items-center justify-center">
+                        <Film className="h-16 w-16 text-muted-foreground/30" />
                       </div>
-                    </div>
-                    <div className="absolute bottom-3 left-3 text-white text-sm font-medium bg-black/50 backdrop-blur-sm rounded px-2 py-1">
-                      Play Trailer
-                    </div>
-                  </button>
-                </section>
-              )}
+                    )}
+                    {/* Gradient overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-background/40 to-transparent" />
+                  </div>
 
-              {/* ─── Cast Section ──────────────────────────────────── */}
-              {!isLoading && cast.length > 0 && (
-                <section>
-                  <h3 className="text-lg font-semibold text-foreground mb-3">Cast</h3>
-                  <div className="flex gap-3 overflow-x-auto content-row-scroll hide-scrollbar pb-2">
-                    {cast.map((member) => (
-                      <div
-                        key={member.id}
-                        className="flex-shrink-0 w-[100px] sm:w-[110px] text-center group cursor-pointer"
-                      >
-                        <div className="relative w-[100px] h-[100px] sm:w-[110px] sm:h-[110px] rounded-full overflow-hidden mx-auto ring-2 ring-transparent group-hover:ring-ars/50 transition-all">
-                          {member.profile_path ? (
+                  {/* Hero Content Overlay */}
+                  <div className="relative -mt-24 sm:-mt-32 px-4 sm:px-6 pb-4">
+                    <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
+                      {/* Poster */}
+                      <div className="hidden sm:block flex-shrink-0">
+                        <div className="relative w-[140px] h-[210px] rounded-lg overflow-hidden shadow-2xl ring-1 ring-white/10">
+                          {displayData?.posterPath ? (
                             <Image
-                              src={profileUrl(member.profile_path)}
-                              alt={member.name}
+                              src={posterUrl(displayData.posterPath)}
+                              alt={displayData.title}
                               fill
-                              sizes="110px"
+                              sizes="140px"
                               className="object-cover"
                             />
                           ) : (
                             <div className="w-full h-full bg-muted flex items-center justify-center">
-                              <span className="text-2xl font-bold text-muted-foreground/40">
-                                {member.name.charAt(0)}
-                              </span>
+                              <Film className="h-8 w-8 text-muted-foreground/30" />
                             </div>
                           )}
                         </div>
-                        <p className="mt-2 text-xs font-medium text-foreground leading-tight line-clamp-2">
-                          {member.name}
-                        </p>
-                        {member.character && (
-                          <p className="text-[11px] text-muted-foreground leading-tight line-clamp-1">
-                            {member.character}
+                      </div>
+
+                      {/* Title Info */}
+                      <div className="flex-1 pt-2 sm:pt-16 space-y-2">
+                        {/* Type Badge */}
+                        {displayData && (
+                          <span
+                            className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold uppercase rounded-md ${getTypeBadgeClasses(displayData.type)}`}
+                          >
+                            <TypeIcon className="h-3 w-3" />
+                            {getTypeLabel(displayData.type)}
+                          </span>
+                        )}
+
+                        {/* Title */}
+                        <h2 className="text-2xl sm:text-3xl font-bold text-foreground leading-tight">
+                          {displayData?.title}
+                        </h2>
+
+                        {/* Original title (if different) */}
+                        {displayData?.originalTitle && displayData.originalTitle !== displayData.title && (
+                          <p className="text-sm text-muted-foreground italic">
+                            {displayData.originalTitle}
                           </p>
                         )}
+
+                        {/* Tagline */}
+                        {displayData?.tagline && (
+                          <p className="text-sm italic text-ars">
+                            &ldquo;{displayData.tagline}&rdquo;
+                          </p>
+                        )}
+
+                        {/* Meta row: Rating, Year, Runtime */}
+                        <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                          {displayData && displayData.voteAverage > 0 && (
+                            <span className="flex items-center gap-1">
+                              <Star className="h-4 w-4 rating-star fill-current" />
+                              <span className="font-semibold text-foreground">
+                                {displayData.voteAverage.toFixed(1)}
+                              </span>
+                              <span className="text-xs">({displayData.voteCount?.toLocaleString()})</span>
+                            </span>
+                          )}
+                          {displayData?.releaseDate && (
+                            <span className="flex items-center gap-1">
+                              <Calendar className="h-4 w-4" />
+                              {getYear(displayData.releaseDate)}
+                            </span>
+                          )}
+                          {displayData?.runtime ? (
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-4 w-4" />
+                              {formatRuntime(displayData.runtime)}
+                            </span>
+                          ) : displayData?.numberOfEpisodes ? (
+                            <span className="flex items-center gap-1">
+                              <Tv className="h-4 w-4" />
+                              {displayData.numberOfSeasons} Season{displayData.numberOfSeasons > 1 ? 's' : ''} &middot; {displayData.numberOfEpisodes} Episode{displayData.numberOfEpisodes > 1 ? 's' : ''}
+                            </span>
+                          ) : null}
+                        </div>
                       </div>
-                    ))}
+                    </div>
                   </div>
-                </section>
+                </>
               )}
 
-              {/* Cast skeleton */}
-              {isLoading && <CastSkeleton />}
+              {/* ─── Action Buttons Row ──────────────────────────────── */}
+              {!isLoading && displayData && (
+                <div className="px-4 sm:px-6 py-3 flex flex-wrap gap-2">
+                  <Button
+                    className="bg-ars hover:bg-ars/90 text-ars-foreground font-semibold"
+                    onClick={() => {
+                      if (trailerKey) {
+                        setShowTrailer(true);
+                      }
+                    }}
+                  >
+                    <Play className="h-4 w-4 fill-current" />
+                    {trailerKey ? 'Watch Trailer' : 'Watch Now'}
+                  </Button>
+                  {/* Add to List Dropdown */}
+                  <div className="relative">
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowListDropdown(!showListDropdown)}
+                      className={`gap-1 ${watchListStatus ? 'border-ars/50 text-ars' : ''}`}
+                    >
+                      {watchListStatus === 'watching' ? (
+                        <Eye className="h-4 w-4 text-emerald-500" />
+                      ) : watchListStatus === 'watchlist' ? (
+                        <ClipboardList className="h-4 w-4 text-amber-500" />
+                      ) : watchListStatus === 'finished' ? (
+                        <CheckCircle className="h-4 w-4 text-sky-500" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                      {watchListStatus === 'watching' ? 'Watching' : watchListStatus === 'watchlist' ? 'In Watch List' : watchListStatus === 'finished' ? 'Finished' : 'Add to List'}
+                      <ChevronDown className="h-3 w-3 ml-1" />
+                    </Button>
+                    {showListDropdown && (
+                      <>
+                        <div className="fixed inset-0 z-40" onClick={() => setShowListDropdown(false)} />
+                        <div className="absolute left-0 top-full mt-1 z-50 w-48 bg-popover border border-border rounded-lg shadow-xl py-1">
+                          {([
+                            { category: 'watching' as WatchListCategory, icon: Eye, label: 'Watching', emoji: '👁️', color: 'text-emerald-500' },
+                            { category: 'watchlist' as WatchListCategory, icon: ClipboardList, label: 'Watch List', emoji: '📋', color: 'text-amber-500' },
+                            { category: 'finished' as WatchListCategory, icon: CheckCircle, label: 'Finished', emoji: '✅', color: 'text-sky-500' },
+                          ] as const).map((option) => (
+                            <button
+                              key={option.category}
+                              onClick={() => handleWatchListToggle(option.category)}
+                              className={`w-full text-left px-3 py-2.5 text-sm flex items-center gap-2.5 hover:bg-ars/10 transition-colors ${
+                                watchListStatus === option.category ? 'text-ars font-medium bg-ars/5' : 'text-foreground'
+                              }`}
+                            >
+                              <span>{option.emoji}</span>
+                              <span>{option.label}</span>
+                              {watchListStatus === option.category && (
+                                <span className="ml-auto text-ars">✓</span>
+                              )}
+                            </button>
+                          ))}
+                          {watchListStatus && (
+                            <>
+                              <div className="my-1 border-t border-border" />
+                              <button
+                                onClick={() => handleWatchListToggle(null)}
+                                className="w-full text-left px-3 py-2.5 text-sm flex items-center gap-2.5 hover:bg-red-500/10 text-red-500 transition-colors"
+                              >
+                                <span>❤️</span>
+                                <span>Remove from List</span>
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  <Button variant="outline" onClick={handleShare}>
+                    <Share2 className="h-4 w-4" />
+                    Share
+                  </Button>
+                  {displayData.homepage && (
+                    <Button variant="ghost" asChild>
+                      <a href={displayData.homepage} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="h-4 w-4" />
+                        Official Site
+                      </a>
+                    </Button>
+                  )}
+                </div>
+              )}
 
-              {/* ─── Similar Content ───────────────────────────────── */}
-              {!isLoading && similar.length > 0 && (
-                <section>
-                  <h3 className="text-lg font-semibold text-foreground mb-3">More Like This</h3>
-                  <div className="flex gap-3 overflow-x-auto content-row-scroll hide-scrollbar pb-2">
-                    {similar.map((item) => (
-                      <ContentCard
-                        key={`${item.type}-${item.id}`}
-                        item={item}
-                        onClick={onSimilarItemClick}
+              {/* ─── Content Body ────────────────────────────────────── */}
+              <div className="px-4 sm:px-6 pb-6 space-y-6">
+                {/* Overview / Synopsis */}
+                {isLoading ? (
+                  <OverviewSkeleton />
+                ) : (
+                  displayData?.overview && (
+                    <section>
+                      <h3 className="text-lg font-semibold text-foreground mb-2">Overview</h3>
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        {displayData.overview}
+                      </p>
+                    </section>
+                  )
+                )}
+
+                {/* Details Grid */}
+                {isLoading ? (
+                  <DetailsGridSkeleton />
+                ) : (
+                  displayData && (
+                    <section>
+                      <h3 className="text-lg font-semibold text-foreground mb-3">Details</h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {/* Genres */}
+                        {displayData.genres && displayData.genres.length > 0 && (
+                          <div className="space-y-1.5">
+                            <span className="text-xs font-medium uppercase text-muted-foreground tracking-wider">
+                              Genres
+                            </span>
+                            <div className="flex flex-wrap gap-1.5">
+                              {displayData.genres.map((g) => (
+                                <Badge key={'id' in g ? g.id : g.mal_id} variant="secondary" className="text-xs">
+                                  {g.name}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Status */}
+                        {displayData.status && (
+                          <div className="space-y-1.5">
+                            <span className="text-xs font-medium uppercase text-muted-foreground tracking-wider">
+                              Status
+                            </span>
+                            <p className="text-sm text-foreground font-medium">{displayData.status}</p>
+                          </div>
+                        )}
+
+                        {/* Runtime */}
+                        {displayData.runtime ? (
+                          <div className="space-y-1.5">
+                            <span className="text-xs font-medium uppercase text-muted-foreground tracking-wider">
+                              Runtime
+                            </span>
+                            <p className="text-sm text-foreground font-medium flex items-center gap-1.5">
+                              <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                              {formatRuntime(displayData.runtime)}
+                            </p>
+                          </div>
+                        ) : displayData.numberOfEpisodes ? (
+                          <div className="space-y-1.5">
+                            <span className="text-xs font-medium uppercase text-muted-foreground tracking-wider">
+                              Episodes
+                            </span>
+                            <p className="text-sm text-foreground font-medium">
+                              {displayData.numberOfEpisodes} episode{displayData.numberOfEpisodes > 1 ? 's' : ''}
+                              {displayData.numberOfSeasons && ` across ${displayData.numberOfSeasons} season${displayData.numberOfSeasons > 1 ? 's' : ''}`}
+                            </p>
+                          </div>
+                        ) : null}
+
+                        {/* Release Date */}
+                        {displayData.releaseDate && (
+                          <div className="space-y-1.5">
+                            <span className="text-xs font-medium uppercase text-muted-foreground tracking-wider">
+                              Release Date
+                            </span>
+                            <p className="text-sm text-foreground font-medium flex items-center gap-1.5">
+                              <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                              {new Date(displayData.releaseDate).toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric',
+                              })}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Production Companies */}
+                        {displayData.productionCompanies && displayData.productionCompanies.length > 0 && (
+                          <div className="space-y-1.5 sm:col-span-2">
+                            <span className="text-xs font-medium uppercase text-muted-foreground tracking-wider">
+                              Production
+                            </span>
+                            <div className="flex flex-wrap gap-3">
+                              {displayData.productionCompanies.map((pc) => (
+                                <div key={pc.id} className="flex items-center gap-2">
+                                  {pc.logo_path ? (
+                                    <div className="relative w-8 h-8 flex-shrink-0 dark:bg-white/10 rounded p-0.5">
+                                      <Image
+                                        src={logoUrl(pc.logo_path)}
+                                        alt={pc.name}
+                                        width={32}
+                                        height={32}
+                                        className="object-contain"
+                                      />
+                                    </div>
+                                  ) : (
+                                    <div className="w-8 h-8 flex-shrink-0 rounded bg-muted flex items-center justify-center">
+                                      <Film className="h-3.5 w-3.5 text-muted-foreground" />
+                                    </div>
+                                  )}
+                                  <span className="text-sm text-foreground">{pc.name}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Networks (TV Shows) */}
+                        {displayData.type === 'tv' && displayData.networks && displayData.networks.length > 0 && (
+                          <div className="space-y-1.5 sm:col-span-2">
+                            <span className="text-xs font-medium uppercase text-muted-foreground tracking-wider">
+                              Networks
+                            </span>
+                            <div className="flex flex-wrap gap-3">
+                              {displayData.networks.map((net) => (
+                                <div key={net.id} className="flex items-center gap-2">
+                                  {net.logo_path ? (
+                                    <div className="relative w-[48px] h-[20px] flex-shrink-0 dark:bg-white/10 rounded p-0.5">
+                                      <Image
+                                        src={logoUrl(net.logo_path)}
+                                        alt={net.name}
+                                        width={48}
+                                        height={20}
+                                        className="object-contain"
+                                      />
+                                    </div>
+                                  ) : null}
+                                  <span className="text-sm text-foreground">{net.name}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Next Episode (TV Shows) */}
+                        {displayData.type === 'tv' && displayData.nextEpisodeToAir && (
+                          <div className="space-y-1.5 sm:col-span-2">
+                            <span className="text-xs font-medium uppercase text-muted-foreground tracking-wider">
+                              Next Episode
+                            </span>
+                            <p className="text-sm text-foreground font-medium">
+                              {displayData.nextEpisodeToAir.name} —{' '}
+                              {new Date(displayData.nextEpisodeToAir.air_date).toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric',
+                              })}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </section>
+                  )
+                )}
+
+                {/* ─── Where to Watch Section ─────────────────────────── */}
+                {!isLoading && watchProviders && (
+                  <section>
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-lg font-semibold text-foreground">Where to Watch</h3>
+                      {/* Country Selector */}
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+                        <select
+                          value={selectedCountry}
+                          onChange={(e) => setSelectedCountry(e.target.value)}
+                          className="text-xs bg-muted/50 border border-border/50 rounded-md px-2 py-1 text-foreground focus:outline-none focus:ring-1 focus:ring-ars/50"
+                        >
+                          {Object.keys(watchProviders)
+                            .sort()
+                            .map((country) => (
+                              <option key={country} value={country}>
+                                {country}
+                              </option>
+                            ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    {countryProviders ? (
+                      <div className="space-y-4">
+                        {/* Streaming (Flatrate) */}
+                        {countryProviders.flatrate && countryProviders.flatrate.length > 0 && (
+                          <ProviderGroup
+                            title="Stream"
+                            icon={<Tv2 className="h-4 w-4 text-emerald-500" />}
+                            providers={countryProviders.flatrate}
+                          />
+                        )}
+
+                        {/* Free */}
+                        {countryProviders.free && countryProviders.free.length > 0 && (
+                          <ProviderGroup
+                            title="Free"
+                            icon={<Globe className="h-4 w-4 text-sky-500" />}
+                            providers={countryProviders.free}
+                          />
+                        )}
+
+                        {/* Ads */}
+                        {countryProviders.ads && countryProviders.ads.length > 0 && (
+                          <ProviderGroup
+                            title="With Ads"
+                            icon={<Tv2 className="h-4 w-4 text-amber-500" />}
+                            providers={countryProviders.ads}
+                          />
+                        )}
+
+                        {/* Rent */}
+                        {countryProviders.rent && countryProviders.rent.length > 0 && (
+                          <ProviderGroup
+                            title="Rent"
+                            icon={<DollarSign className="h-4 w-4 text-orange-500" />}
+                            providers={countryProviders.rent}
+                          />
+                        )}
+
+                        {/* Buy */}
+                        {countryProviders.buy && countryProviders.buy.length > 0 && (
+                          <ProviderGroup
+                            title="Buy"
+                            icon={<ShoppingCart className="h-4 w-4 text-purple-500" />}
+                            providers={countryProviders.buy}
+                          />
+                        )}
+
+                        {/* Link to TMDB */}
+                        {countryProviders.link && (
+                          <a
+                            href={countryProviders.link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 text-xs text-ars hover:text-ars/80 transition-colors"
+                          >
+                            <ExternalLink className="h-3 w-3" />
+                            View on TMDB
+                          </a>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-8 text-center">
+                        <Tv2 className="h-8 w-8 text-muted-foreground/30 mb-2" />
+                        <p className="text-sm text-muted-foreground">Not available for streaming in {selectedCountry}</p>
+                        {Object.keys(watchProviders).length > 1 && (
+                          <p className="text-xs text-muted-foreground/70 mt-1">Try selecting a different country</p>
+                        )}
+                      </div>
+                    )}
+                  </section>
+                )}
+
+                {/* ─── Trailer Section ───────────────────────────────── */}
+                {!isLoading && showTrailer && trailerKey && (
+                  <section>
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-lg font-semibold text-foreground">Trailer</h3>
+                      <button
+                        onClick={() => setShowTrailer(false)}
+                        className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        Close
+                      </button>
+                    </div>
+                    <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-black">
+                      <iframe
+                        src={`https://www.youtube.com/embed/${trailerKey}?autoplay=1&rel=0`}
+                        title="Trailer"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                        className="absolute inset-0 w-full h-full"
                       />
-                    ))}
-                  </div>
-                </section>
-              )}
+                    </div>
+                  </section>
+                )}
 
-              {/* Similar skeleton */}
-              {isLoading && <SimilarSkeleton />}
+                {/* Trailer button if not showing */}
+                {!isLoading && !showTrailer && trailerKey && (
+                  <section>
+                    <h3 className="text-lg font-semibold text-foreground mb-2">Trailer</h3>
+                    <button
+                      onClick={() => setShowTrailer(true)}
+                      className="relative w-full aspect-video rounded-lg overflow-hidden bg-muted group cursor-pointer"
+                    >
+                      {displayData?.backdropPath && (
+                        <Image
+                          src={backdropUrl(displayData.backdropPath)}
+                          alt="Trailer thumbnail"
+                          fill
+                          sizes="(max-width: 768px) 100vw, 896px"
+                          className="object-cover opacity-60 group-hover:opacity-40 transition-opacity"
+                        />
+                      )}
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-16 h-16 rounded-full bg-ars/90 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                          <Play className="h-7 w-7 text-white fill-white ml-1" />
+                        </div>
+                      </div>
+                      <div className="absolute bottom-3 left-3 text-white text-sm font-medium bg-black/50 backdrop-blur-sm rounded px-2 py-1">
+                        Play Trailer
+                      </div>
+                    </button>
+                  </section>
+                )}
+
+                {/* ─── Cast Section ──────────────────────────────────── */}
+                {!isLoading && cast.length > 0 && (
+                  <section>
+                    <h3 className="text-lg font-semibold text-foreground mb-3">Cast</h3>
+                    <div className="flex gap-3 overflow-x-auto content-row-scroll hide-scrollbar pb-2">
+                      {cast.map((member) => (
+                        <div
+                          key={member.id}
+                          className="flex-shrink-0 w-[100px] sm:w-[110px] text-center group cursor-pointer"
+                          onClick={() => handleCastClick(member.id)}
+                        >
+                          <div className="relative w-[100px] h-[100px] sm:w-[110px] sm:h-[110px] rounded-full overflow-hidden mx-auto ring-2 ring-transparent group-hover:ring-ars/50 transition-all">
+                            {member.profile_path ? (
+                              <Image
+                                src={profileUrl(member.profile_path)}
+                                alt={member.name}
+                                fill
+                                sizes="110px"
+                                className="object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-muted flex items-center justify-center">
+                                <span className="text-2xl font-bold text-muted-foreground/40">
+                                  {member.name.charAt(0)}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                          <p className="mt-2 text-xs font-medium text-foreground leading-tight line-clamp-2 group-hover:text-ars transition-colors">
+                            {member.name}
+                          </p>
+                          {member.character && (
+                            <p className="text-[11px] text-muted-foreground leading-tight line-clamp-1">
+                              {member.character}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+                {/* Cast skeleton */}
+                {isLoading && <CastSkeleton />}
+
+                {/* ─── Similar Content ───────────────────────────────── */}
+                {!isLoading && similar.length > 0 && (
+                  <section>
+                    <h3 className="text-lg font-semibold text-foreground mb-3">More Like This</h3>
+                    <div className="flex gap-3 overflow-x-auto content-row-scroll hide-scrollbar pb-2">
+                      {similar.map((item) => (
+                        <ContentCard
+                          key={`${item.type}-${item.id}`}
+                          item={item}
+                          onClick={onSimilarItemClick}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+                {/* Similar skeleton */}
+                {isLoading && <SimilarSkeleton />}
+              </div>
             </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Person Modal */}
+      <PersonModal
+        open={showPersonModal}
+        onClose={() => {
+          setShowPersonModal(false);
+          setSelectedPersonId(null);
+        }}
+        personId={selectedPersonId}
+        onContentClick={onSimilarItemClick}
+      />
+    </>
+  );
+}
+
+// ─── Provider Group Component ───────────────────────────────────────
+
+function ProviderGroup({
+  title,
+  icon,
+  providers,
+}: {
+  title: string;
+  icon: React.ReactNode;
+  providers: TmdbProvider[];
+}) {
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-2">
+        {icon}
+        <span className="text-sm font-medium text-foreground">{title}</span>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {providers.map((provider) => (
+          <div
+            key={provider.provider_id}
+            className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-muted/50 border border-border/30 hover:bg-muted/80 transition-colors"
+            title={provider.provider_name}
+          >
+            {provider.logo_path ? (
+              <div className="relative w-8 h-8 flex-shrink-0 rounded overflow-hidden dark:bg-white/10">
+                <Image
+                  src={logoUrl(provider.logo_path)}
+                  alt={provider.provider_name}
+                  width={32}
+                  height={32}
+                  className="object-contain"
+                />
+              </div>
+            ) : (
+              <div className="w-8 h-8 flex-shrink-0 rounded bg-muted flex items-center justify-center">
+                <Tv2 className="h-4 w-4 text-muted-foreground" />
+              </div>
+            )}
+            <span className="text-xs text-foreground font-medium">{provider.provider_name}</span>
           </div>
-      </DialogContent>
-    </Dialog>
+        ))}
+      </div>
+    </div>
   );
 }
 

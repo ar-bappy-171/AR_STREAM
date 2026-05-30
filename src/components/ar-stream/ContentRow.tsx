@@ -1,32 +1,42 @@
 'use client';
 
 import { useRef, useState, useCallback, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, RefreshCw, Film } from 'lucide-react';
+import { ChevronLeft, ChevronRight, RefreshCw, Film, Loader2 } from 'lucide-react';
 import type { ContentItem } from '@/lib/store';
+import type { WatchListCategory } from '@/lib/storage';
 import { ContentCard, ContentCardSkeleton } from './ContentCard';
+import { Button } from '@/components/ui/button';
 
 interface ContentRowProps {
   title: string;
+  sectionId: string;
   items: ContentItem[];
   loading?: boolean;
   error?: string | null;
   onRetry?: () => void;
   onItemClick?: (item: ContentItem) => void;
-  onFavoriteToggle?: (item: ContentItem) => void;
-  favorites?: Set<string>; // Set of "type-id" strings
+  onWatchListToggle?: (item: ContentItem, category: WatchListCategory | null) => void;
+  watchListStatus?: (id: number, type: string) => WatchListCategory | null;
+  hasMore?: boolean;
+  loadingMore?: boolean;
+  onLoadMore?: (sectionId: string) => void;
 }
 
 const SCROLL_AMOUNT = 800;
 
 export function ContentRow({
   title,
+  sectionId,
   items,
   loading = false,
   error = null,
   onRetry,
   onItemClick,
-  onFavoriteToggle,
-  favorites = new Set(),
+  onWatchListToggle,
+  watchListStatus,
+  hasMore = false,
+  loadingMore = false,
+  onLoadMore,
 }: ContentRowProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -66,10 +76,16 @@ export function ContentRow({
     el.scrollBy({ left: amount, behavior: 'smooth' });
   }, []);
 
-  const isFavorite = useCallback(
-    (item: ContentItem) => favorites.has(`${item.type}-${item.id}`),
-    [favorites]
+  const getStatus = useCallback(
+    (item: ContentItem) => watchListStatus?.(item.id, item.type) ?? null,
+    [watchListStatus]
   );
+
+  const handleLoadMore = useCallback(() => {
+    if (onLoadMore) {
+      onLoadMore(sectionId);
+    }
+  }, [onLoadMore, sectionId]);
 
   // Determine arrow visibility
   const showArrows = isHovering;
@@ -173,10 +189,31 @@ export function ContentRow({
                   key={`${item.type}-${item.id}`}
                   item={item}
                   onClick={onItemClick}
-                  onFavoriteToggle={onFavoriteToggle}
-                  isFavorite={isFavorite(item)}
+                  onWatchListToggle={onWatchListToggle}
+                  watchListStatus={getStatus(item)}
                 />
               ))}
+
+              {/* Load More Button / Indicator */}
+              {hasMore && (
+                <div className="flex-shrink-0 flex items-center justify-center w-[155px] sm:w-[175px]">
+                  {loadingMore ? (
+                    <div className="flex flex-col items-center gap-2 py-8">
+                      <Loader2 className="h-6 w-6 animate-spin text-ars" />
+                      <span className="text-xs text-muted-foreground">Loading...</span>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5 text-xs h-9"
+                      onClick={handleLoadMore}
+                    >
+                      Load More
+                    </Button>
+                  )}
+                </div>
+              )}
             </>
           )}
         </div>

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Search, Film, Tv, Sparkles, RefreshCw, Loader2, SearchX } from 'lucide-react';
 import type { ContentItem } from '@/lib/store';
+import type { WatchListCategory } from '@/lib/storage';
 import { ContentCard, ContentCardSkeleton } from './ContentCard';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -10,8 +11,8 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 interface SearchResultsProps {
   query: string;
   onItemClick: (item: ContentItem) => void;
-  onFavoriteToggle: (item: ContentItem) => void;
-  favorites: Set<string>;
+  onWatchListToggle: (item: ContentItem, category: WatchListCategory | null) => void;
+  watchListStatus: (id: number, type: string) => WatchListCategory | null;
 }
 
 type FilterTab = 'all' | 'movies' | 'tv' | 'anime';
@@ -84,14 +85,14 @@ function getFilterIcon(tab: FilterTab) {
   }
 }
 
-export default function SearchResults({ query, onItemClick, onFavoriteToggle, favorites }: SearchResultsProps) {
+export default function SearchResults({ query, onItemClick, onWatchListToggle, watchListStatus }: SearchResultsProps) {
   const [activeTab, setActiveTab] = useState<FilterTab>('all');
   const [tmdbState, setTmdbState] = useState<SearchState>(INITIAL_STATE);
   const [jikanState, setJikanState] = useState<SearchState>(INITIAL_STATE);
 
-  const isFavorite = useCallback(
-    (item: ContentItem) => favorites.has(`${item.type}-${item.id}`),
-    [favorites]
+  const getStatus = useCallback(
+    (item: ContentItem) => watchListStatus(item.id, item.type),
+    [watchListStatus]
   );
 
   // Fetch TMDB results (movies + TV)
@@ -318,8 +319,8 @@ export default function SearchResults({ query, onItemClick, onFavoriteToggle, fa
                 key={`${item.type}-${item.id}`}
                 item={item}
                 onClick={onItemClick}
-                onFavoriteToggle={onFavoriteToggle}
-                isFavorite={isFavorite(item)}
+                onWatchListToggle={onWatchListToggle}
+                watchListStatus={getStatus(item)}
               />
             ))}
             {/* Loading more skeletons at the end */}

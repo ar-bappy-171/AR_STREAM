@@ -2,10 +2,11 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { useTheme } from 'next-themes';
-import { Search, Menu, Sun, Moon, Heart, Play } from 'lucide-react';
+import { Search, Menu, Sun, Moon, ListChecks, Play, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAppStore } from '@/lib/store';
+import ThemeSelector from '@/components/ar-stream/ThemeSelector';
 
 export default function Header() {
   const {
@@ -14,6 +15,7 @@ export default function Header() {
     setActiveSection,
     setMobileSidebarOpen,
     activeSection,
+    kidsModeEnabled,
   } = useAppStore();
 
   const { theme, setTheme } = useTheme();
@@ -64,8 +66,8 @@ export default function Header() {
     setMobileSidebarOpen(true);
   }, [setMobileSidebarOpen]);
 
-  const handleFavoritesClick = useCallback(() => {
-    setActiveSection('favorites');
+  const handleMyListsClick = useCallback(() => {
+    setActiveSection('my-lists');
   }, [setActiveSection]);
 
   return (
@@ -96,6 +98,13 @@ export default function Header() {
             <span className="text-xl font-extrabold tracking-tight bg-gradient-to-r from-ars via-orange-400 to-amber-400 bg-clip-text text-transparent">
               AR-Stream
             </span>
+            {/* Kids Mode Badge */}
+            {kidsModeEnabled && (
+              <span className="flex items-center gap-1 text-[10px] font-bold bg-emerald-500/10 text-emerald-600 px-1.5 py-0.5 rounded-full border border-emerald-500/20">
+                <Lock className="h-2.5 w-2.5" />
+                Kids
+              </span>
+            )}
           </button>
         </div>
 
@@ -162,15 +171,18 @@ export default function Header() {
             <Moon className="absolute size-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
           </Button>
 
-          {/* Favorites Button */}
+          {/* Color Theme Selector */}
+          <ThemeSelector />
+
+          {/* My Lists Button */}
           <Button
             variant="ghost"
             size="icon"
-            onClick={handleFavoritesClick}
+            onClick={handleMyListsClick}
             className="shrink-0"
-            aria-label="Favorites"
+            aria-label="My Lists"
           >
-            <Heart className="size-5" />
+            <ListChecks className="size-5" />
           </Button>
         </div>
       </div>

@@ -18,6 +18,7 @@ import {
   History,
 } from 'lucide-react';
 import type { ContentItem } from '@/lib/store';
+import type { WatchListCategory } from '@/lib/storage';
 import { ContentCard } from './ContentCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,8 +33,8 @@ type ViewMode = 'grid' | 'list';
 interface ContinueWatchingSectionProps {
   items: ContentItem[];
   onItemClick: (item: ContentItem) => void;
-  onFavoriteToggle: (item: ContentItem) => void;
-  favorites: Set<string>;
+  onWatchListToggle: (item: ContentItem, category: WatchListCategory | null) => void;
+  watchListStatus: (id: number, type: string) => WatchListCategory | null;
   onRemoveItem: (id: number, type: string) => void;
   onClearAll: () => void;
 }
@@ -152,8 +153,8 @@ function ContinueWatchingStatsBar({ items }: { items: ContentItem[] }) {
 export default function ContinueWatchingSection({
   items,
   onItemClick,
-  onFavoriteToggle,
-  favorites,
+  onWatchListToggle,
+  watchListStatus,
   onRemoveItem,
   onClearAll,
 }: ContinueWatchingSectionProps) {
@@ -218,9 +219,9 @@ export default function ContinueWatchingSection({
     anime: items.filter(i => i.type === 'anime').length,
   }), [items]);
 
-  const isFavorite = useCallback(
-    (item: ContentItem) => favorites.has(`${item.type}-${item.id}`),
-    [favorites]
+  const getStatus = useCallback(
+    (item: ContentItem) => watchListStatus(item.id, item.type),
+    [watchListStatus]
   );
 
   // Handle clear all
@@ -432,8 +433,8 @@ export default function ContinueWatchingSection({
                 key={`${item.type}-${item.id}`}
                 item={item}
                 onClick={onItemClick}
-                onFavoriteToggle={onFavoriteToggle}
-                isFavorite={isFavorite(item)}
+                onWatchListToggle={onWatchListToggle}
+                watchListStatus={getStatus(item)}
               />
             ))}
           </div>

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import {
   Home,
   Clock,
+  ListChecks,
   Heart,
   LayoutGrid,
   TrendingUp,
@@ -23,6 +24,9 @@ import {
   PanelLeft,
   X,
   Tv,
+  BarChart3,
+  CalendarDays,
+  Settings,
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
@@ -61,8 +65,12 @@ const navigationGroups: { title: string; items: NavItem[] }[] = [
     items: [
       { id: 'home', label: 'Home', icon: Home, section: 'home' },
       { id: 'all-content', label: 'All Content', icon: LayoutGrid, section: 'all-content' },
+      { id: 'recommendations', label: 'For You', icon: Sparkles, section: 'recommendations' },
       { id: 'continue-watching', label: 'Continue Watching', icon: Clock, section: 'continue-watching' },
-      { id: 'favorites', label: 'Favorites', icon: Heart, section: 'favorites' },
+      { id: 'my-lists', label: 'My Lists', icon: ListChecks, section: 'my-lists' },
+      { id: 'dashboard', label: 'Dashboard', icon: BarChart3, section: 'dashboard' },
+      { id: 'activity', label: 'Activity', icon: CalendarDays, section: 'activity' },
+      { id: 'settings', label: 'Settings', icon: Settings, section: 'settings' },
     ],
   },
   {

@@ -1,0 +1,18 @@
+{
+  "name": "AR-Stream",
+  "short_name": "AR-Stream",
+  "description": "Movies, TV Shows & Anime Streaming Aggregator",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a1a2e",
+  "theme_color": "#e85d04",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

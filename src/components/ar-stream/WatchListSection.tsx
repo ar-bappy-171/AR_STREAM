@@ -4,21 +4,27 @@ import { useState, useMemo, useCallback } from 'react';
 import Image from 'next/image';
 import {
   Search,
-  LayoutGrid,
+  ListChecks,
+  Eye,
+  ClipboardList,
+  CheckCircle,
   Film,
   Tv,
   Sparkles,
   ArrowUpDown,
+  Trash2,
   X,
   Grid3X3,
   LayoutList,
   Star,
   Calendar,
-  Layers,
+  Clock,
+  MoveRight,
 } from 'lucide-react';
 import type { ContentItem } from '@/lib/store';
 import type { WatchListCategory } from '@/lib/storage';
-import { ContentCard, ContentCardSkeleton } from './ContentCard';
+import { getWatchProgress } from '@/lib/storage';
+import { ContentCard } from './ContentCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -26,15 +32,16 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 // ─── Types ──────────────────────────────────────────────────────────
 
 type FilterTab = 'all' | 'movies' | 'tv' | 'anime';
-type SortOption = 'name-az' | 'name-za' | 'rating-high' | 'rating-low' | 'year-new' | 'year-old' | 'popular' | 'trending';
+type SortOption = 'recent' | 'oldest' | 'name-az' | 'name-za' | 'rating-high' | 'rating-low' | 'year-new' | 'year-old';
 type ViewMode = 'grid' | 'list';
 
-interface AllContentSectionProps {
+interface WatchListSectionProps {
   items: ContentItem[];
-  loading?: boolean;
   onItemClick: (item: ContentItem) => void;
   onWatchListToggle: (item: ContentItem, category: WatchListCategory | null) => void;
   watchListStatus: (id: number, type: string) => WatchListCategory | null;
+  onRemoveFromList: (id: number, type: string) => void;
+  onClearCategory: (category: WatchListCategory) => void;
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────
@@ -81,34 +88,78 @@ function getTypeIcon(type: ContentItem['type']) {
 
 function getSortLabel(sort: SortOption): string {
   const labels: Record<SortOption, string> = {
+    'recent': 'Recently Added',
+    'oldest': 'Oldest First',
     'name-az': 'Name A → Z',
     'name-za': 'Name Z → A',
     'rating-high': 'Rating ↑',
     'rating-low': 'Rating ↓',
     'year-new': 'Newest Year',
     'year-old': 'Oldest Year',
-    'popular': 'Most Popular',
-    'trending': 'Trending',
   };
   return labels[sort];
 }
 
+function getRelativeTime(timestamp: number): string {
+  const now = Date.now();
+  const diff = now - timestamp;
+  const seconds = Math.floor(diff / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  if (days > 30) return `${Math.floor(days / 30)}mo ago`;
+  if (days > 0) return `${days}d ago`;
+  if (hours > 0) return `${hours}h ago`;
+  if (minutes > 0) return `${minutes}m ago`;
+  return 'Just now';
+}
+
+function getCategoryColor(category: WatchListCategory): string {
+  switch (category) {
+    case 'watching': return 'bg-emerald-500 text-white';
+    case 'watchlist': return 'bg-amber-500 text-white';
+    case 'finished': return 'bg-sky-500 text-white';
+  }
+}
+
+function getCategoryIcon(category: WatchListCategory) {
+  switch (category) {
+    case 'watching': return Eye;
+    case 'watchlist': return ClipboardList;
+    case 'finished': return CheckCircle;
+  }
+}
+
+function getCategoryLabel(category: WatchListCategory): string {
+  switch (category) {
+    case 'watching': return 'Watching';
+    case 'watchlist': return 'Watch List';
+    case 'finished': return 'Finished';
+  }
+}
+
+const MAIN_TABS: { key: WatchListCategory; icon: React.ElementType; label: string }[] = [
+  { key: 'watching', icon: Eye, label: 'Watching' },
+  { key: 'watchlist', icon: ClipboardList, label: 'Watch List' },
+  { key: 'finished', icon: CheckCircle, label: 'Finished' },
+];
+
 // ─── Stats Bar ──────────────────────────────────────────────────────
 
-function AllContentStatsBar({ items }: { items: ContentItem[] }) {
+function StatsBar({ items, category }: { items: ContentItem[]; category: WatchListCategory }) {
   const movies = items.filter(i => i.type === 'movie').length;
   const tvShows = items.filter(i => i.type === 'tv').length;
   const anime = items.filter(i => i.type === 'anime').length;
   const avgRating = items.length > 0
-    ? (items.reduce((sum, i) => sum + i.voteAverage, 0) / items.filter(i => i.voteAverage > 0).length || 0).toFixed(1)
+    ? (items.reduce((sum, i) => sum + i.voteAverage, 0) / items.length).toFixed(1)
     : '0.0';
-  const uniqueYears = new Set(items.map(i => i.releaseDate?.split('-')[0]).filter(Boolean));
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
       <div className="bg-card/80 border border-border/50 rounded-lg p-3 text-center">
         <p className="text-2xl font-bold text-foreground">{items.length}</p>
-        <p className="text-xs text-muted-foreground">Total Content</p>
+        <p className="text-xs text-muted-foreground">{getCategoryLabel(category)}</p>
       </div>
       <div className="bg-card/80 border border-border/50 rounded-lg p-3 text-center">
         <div className="flex items-center justify-center gap-1.5">
@@ -123,8 +174,10 @@ function AllContentStatsBar({ items }: { items: ContentItem[] }) {
         <p className="text-xs text-muted-foreground">Avg Rating</p>
       </div>
       <div className="bg-card/80 border border-border/50 rounded-lg p-3 text-center">
-        <p className="text-2xl font-bold text-foreground">{uniqueYears.size}</p>
-        <p className="text-xs text-muted-foreground">Unique Years</p>
+        <p className="text-2xl font-bold text-foreground">
+          {items.length > 0 ? getRelativeTime(Math.max(...items.map(i => i.addedAt || 0))) : '—'}
+        </p>
+        <p className="text-xs text-muted-foreground">Last Added</p>
       </div>
     </div>
   );
@@ -132,22 +185,38 @@ function AllContentStatsBar({ items }: { items: ContentItem[] }) {
 
 // ─── Component ──────────────────────────────────────────────────────
 
-export default function AllContentSection({
+export default function WatchListSection({
   items,
-  loading = false,
   onItemClick,
   onWatchListToggle,
   watchListStatus,
-}: AllContentSectionProps) {
+  onRemoveFromList,
+  onClearCategory,
+}: WatchListSectionProps) {
+  const [activeCategory, setActiveCategory] = useState<WatchListCategory>('watching');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<FilterTab>('all');
-  const [sortBy, setSortBy] = useState<SortOption>('popular');
+  const [sortBy, setSortBy] = useState<SortOption>('recent');
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [showSortMenu, setShowSortMenu] = useState(false);
+  const [confirmClearAll, setConfirmClearAll] = useState(false);
+  const [moveDropdownItem, setMoveDropdownItem] = useState<string | null>(null);
+
+  // Items for current category
+  const categoryItems = useMemo(() => {
+    return items.filter(i => i.watchListCategory === activeCategory);
+  }, [items, activeCategory]);
+
+  // Counts per category
+  const categoryCounts = useMemo(() => ({
+    watching: items.filter(i => i.watchListCategory === 'watching').length,
+    watchlist: items.filter(i => i.watchListCategory === 'watchlist').length,
+    finished: items.filter(i => i.watchListCategory === 'finished').length,
+  }), [items]);
 
   // Filter + Search + Sort
   const filteredItems = useMemo(() => {
-    let result = [...items];
+    let result = [...categoryItems];
 
     // Filter by type
     if (activeFilter === 'movies') result = result.filter(i => i.type === 'movie');
@@ -167,6 +236,10 @@ export default function AllContentSection({
     // Sort
     result.sort((a, b) => {
       switch (sortBy) {
+        case 'recent':
+          return (b.addedAt || 0) - (a.addedAt || 0);
+        case 'oldest':
+          return (a.addedAt || 0) - (b.addedAt || 0);
         case 'name-az':
           return a.title.localeCompare(b.title);
         case 'name-za':
@@ -179,66 +252,70 @@ export default function AllContentSection({
           return (b.releaseDate || '').localeCompare(a.releaseDate || '');
         case 'year-old':
           return (a.releaseDate || '').localeCompare(b.releaseDate || '');
-        case 'popular':
-          return (b.popularity || 0) - (a.popularity || 0);
-        case 'trending':
-          return (b.voteCount || 0) - (a.voteCount || 0);
         default:
           return 0;
       }
     });
 
     return result;
-  }, [items, activeFilter, searchQuery, sortBy]);
+  }, [categoryItems, activeFilter, searchQuery, sortBy]);
 
-  // Counts per type
+  // Counts per type within category
   const counts = useMemo(() => ({
-    all: items.length,
-    movies: items.filter(i => i.type === 'movie').length,
-    tv: items.filter(i => i.type === 'tv').length,
-    anime: items.filter(i => i.type === 'anime').length,
-  }), [items]);
+    all: categoryItems.length,
+    movies: categoryItems.filter(i => i.type === 'movie').length,
+    tv: categoryItems.filter(i => i.type === 'tv').length,
+    anime: categoryItems.filter(i => i.type === 'anime').length,
+  }), [categoryItems]);
 
-  const getStatus = useCallback(
+  // Get the watchlist status for a given item
+  const getWatchListStatus = useCallback(
     (item: ContentItem) => watchListStatus(item.id, item.type),
     [watchListStatus]
   );
 
-  // ─── Loading State ────────────────────────────────────────────────
-  if (loading && items.length === 0) {
-    return (
-      <div className="w-full fade-in">
-        <div className="px-4 sm:px-6 lg:px-8 mb-6">
-          <h2 className="text-xl sm:text-2xl font-bold text-foreground">All Content</h2>
-          <p className="text-sm text-muted-foreground">Loading content from all sources...</p>
-        </div>
-        <div className="px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
-            {Array.from({ length: 12 }).map((_, i) => (
-              <ContentCardSkeleton key={`skeleton-${i}`} />
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Handle clear all for current category
+  const handleClearAll = useCallback(() => {
+    if (confirmClearAll) {
+      onClearCategory(activeCategory);
+      setConfirmClearAll(false);
+    } else {
+      setConfirmClearAll(true);
+      setTimeout(() => setConfirmClearAll(false), 3000);
+    }
+  }, [confirmClearAll, activeCategory, onClearCategory]);
 
-  // ─── Empty State ────────────────────────────────────────────────
-  if (items.length === 0) {
+  // Move item to another category
+  const handleMoveItem = useCallback((item: ContentItem, newCategory: WatchListCategory) => {
+    onWatchListToggle(item, newCategory);
+    setMoveDropdownItem(null);
+  }, [onWatchListToggle]);
+
+  // Other categories for move dropdown
+  const otherCategories = MAIN_TABS.filter(t => t.key !== activeCategory);
+
+  // ─── Empty State for all lists ──────────────────────────────────
+  const totalItems = items.length;
+  if (totalItems === 0) {
     return (
       <div className="w-full fade-in">
         <div className="px-4 sm:px-6 lg:px-8 mb-6">
-          <h2 className="text-xl sm:text-2xl font-bold text-foreground">All Content</h2>
-          <p className="text-sm text-muted-foreground">Browse everything in one place</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-foreground">My Lists</h2>
+          <p className="text-sm text-muted-foreground">Organize your content into lists</p>
         </div>
         <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
           <div className="size-20 rounded-full bg-ars/10 flex items-center justify-center mb-4">
-            <LayoutGrid className="size-10 text-ars/50" />
+            <ListChecks className="size-10 text-ars/50" />
           </div>
-          <h3 className="text-xl font-semibold text-foreground mb-2">No Content Available</h3>
-          <p className="text-sm text-muted-foreground max-w-md">
-            Content is loading from various sources. Please wait or check back in a moment.
+          <h3 className="text-xl font-semibold text-foreground mb-2">No Lists Yet</h3>
+          <p className="text-sm text-muted-foreground max-w-md mb-6">
+            Click the heart icon on any movie, TV show, or anime to add it to a list. Choose from Watching, Watch List, or Finished.
           </p>
+          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1"><Eye className="h-3.5 w-3.5 text-emerald-500" /> Watching</span>
+            <span className="flex items-center gap-1"><ClipboardList className="h-3.5 w-3.5 text-amber-500" /> Watch List</span>
+            <span className="flex items-center gap-1"><CheckCircle className="h-3.5 w-3.5 text-sky-500" /> Finished</span>
+          </div>
         </div>
       </div>
     );
@@ -249,14 +326,11 @@ export default function AllContentSection({
     <div className="w-full fade-in space-y-5">
       {/* Header */}
       <div className="px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-xl sm:text-2xl font-bold text-foreground">All Content</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-foreground">My Lists</h2>
             <p className="text-sm text-muted-foreground">
-              {filteredItems.length === items.length
-                ? `${items.length} title${items.length !== 1 ? 's' : ''} from all sources`
-                : `${filteredItems.length} of ${items.length} titles`
-              }
+              {totalItems} saved item{totalItems !== 1 ? 's' : ''} across all lists
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -277,13 +351,45 @@ export default function AllContentSection({
                 <LayoutList className="h-4 w-4" />
               </button>
             </div>
+            {/* Clear All */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleClearAll}
+              className={`gap-1.5 text-xs ${confirmClearAll ? 'border-red-500 text-red-500 hover:bg-red-500/10' : 'text-muted-foreground'}`}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              {confirmClearAll ? 'Confirm?' : `Clear ${getCategoryLabel(activeCategory)}`}
+            </Button>
           </div>
         </div>
+
+        {/* Category Tabs */}
+        <Tabs value={activeCategory} onValueChange={(v) => { setActiveCategory(v as WatchListCategory); setSearchQuery(''); setActiveFilter('all'); setConfirmClearAll(false); }}>
+          <TabsList className="bg-muted/50 h-10 w-full sm:w-auto">
+            {MAIN_TABS.map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <TabsTrigger
+                  key={tab.key}
+                  value={tab.key}
+                  className="gap-1.5 text-xs sm:text-sm px-3 sm:px-4 data-[state=active]:bg-ars data-[state=active]:text-ars-foreground flex-1 sm:flex-none"
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  <span>{tab.label}</span>
+                  <span className="ml-1 text-[10px] bg-background/20 rounded-full px-1.5 py-0.5">
+                    {categoryCounts[tab.key]}
+                  </span>
+                </TabsTrigger>
+              );
+            })}
+          </TabsList>
+        </Tabs>
       </div>
 
       {/* Stats Bar */}
       <div className="px-4 sm:px-6 lg:px-8">
-        <AllContentStatsBar items={items} />
+        <StatsBar items={categoryItems} category={activeCategory} />
       </div>
 
       {/* Search + Filter + Sort Toolbar */}
@@ -293,7 +399,7 @@ export default function AllContentSection({
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             type="text"
-            placeholder="Search all content by title, original title, or overview..."
+            placeholder={`Search your ${getCategoryLabel(activeCategory).toLowerCase()} list by title or overview...`}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10 pr-10 bg-card/80 border-border/50 focus:border-ars/50"
@@ -314,7 +420,7 @@ export default function AllContentSection({
           <Tabs value={activeFilter} onValueChange={(v) => setActiveFilter(v as FilterTab)}>
             <TabsList className="bg-muted/50 h-9">
               {([
-                { key: 'all', label: 'All', icon: Layers },
+                { key: 'all', label: 'All', icon: ListChecks },
                 { key: 'movies', label: `Movies (${counts.movies})`, icon: Film },
                 { key: 'tv', label: `TV (${counts.tv})`, icon: Tv },
                 { key: 'anime', label: `Anime (${counts.anime})`, icon: Sparkles },
@@ -348,14 +454,14 @@ export default function AllContentSection({
                 <div className="fixed inset-0 z-40" onClick={() => setShowSortMenu(false)} />
                 <div className="absolute right-0 top-full mt-1 z-50 w-48 bg-popover border border-border rounded-lg shadow-xl py-1">
                   {([
-                    'popular',
-                    'trending',
+                    'recent',
+                    'oldest',
+                    'name-az',
+                    'name-za',
                     'rating-high',
                     'rating-low',
                     'year-new',
                     'year-old',
-                    'name-az',
-                    'name-za',
                   ] as SortOption[]).map((option) => (
                     <button
                       key={option}
@@ -374,15 +480,41 @@ export default function AllContentSection({
         </div>
       </div>
 
-      {/* Results */}
-      {filteredItems.length === 0 ? (
+      {/* Empty state for current category */}
+      {categoryItems.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
+          <div className="size-16 rounded-full bg-ars/10 flex items-center justify-center mb-4">
+            {(() => {
+              const CatIcon = getCategoryIcon(activeCategory);
+              return <CatIcon className="size-8 text-ars/50" />;
+            })()}
+          </div>
+          <h3 className="text-lg font-semibold text-foreground mb-2">
+            No {getCategoryLabel(activeCategory)} Items
+          </h3>
+          <p className="text-sm text-muted-foreground max-w-md mb-4">
+            {activeCategory === 'watching'
+              ? 'Add shows and movies you\'re currently watching to keep track of your progress.'
+              : activeCategory === 'watchlist'
+                ? 'Save content you want to watch later to your Watch List.'
+                : 'Mark content as Finished when you\'ve completed it.'
+            }
+          </p>
+          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1"><Film className="h-3.5 w-3.5" /> Movies</span>
+            <span className="flex items-center gap-1"><Tv className="h-3.5 w-3.5" /> TV Shows</span>
+            <span className="flex items-center gap-1"><Sparkles className="h-3.5 w-3.5" /> Anime</span>
+          </div>
+        </div>
+      ) : filteredItems.length === 0 ? (
+        /* Search/Filter empty state */
         <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
           <Search className="h-12 w-12 text-muted-foreground/30 mb-3" />
           <h3 className="text-lg font-semibold text-foreground mb-1">No matches found</h3>
           <p className="text-sm text-muted-foreground max-w-sm">
             {searchQuery
-              ? `No content matching "${searchQuery}". Try a different search term.`
-              : `No ${activeFilter === 'all' ? '' : activeFilter === 'movies' ? 'movies' : activeFilter === 'tv' ? 'TV shows' : 'anime'} available.`
+              ? `No items matching "${searchQuery}". Try a different search term.`
+              : `No ${activeFilter === 'all' ? '' : activeFilter === 'movies' ? 'movies' : activeFilter === 'tv' ? 'TV shows' : 'anime'} in your ${getCategoryLabel(activeCategory).toLowerCase()} list.`
             }
           </p>
           {searchQuery && (
@@ -407,7 +539,7 @@ export default function AllContentSection({
                 item={item}
                 onClick={onItemClick}
                 onWatchListToggle={onWatchListToggle}
-                watchListStatus={getStatus(item)}
+                watchListStatus={getWatchListStatus(item)}
               />
             ))}
           </div>
@@ -415,13 +547,13 @@ export default function AllContentSection({
       ) : (
         /* ─── List View ─────────────────────────────────────────── */
         <div className="px-4 sm:px-6 lg:px-8">
-          <div className="space-y-2 max-h-[70vh] overflow-y-auto overscroll-contain custom-scrollbar pr-1">
+          <div className="space-y-2">
             {filteredItems.map((item) => {
               const TypeIcon = getTypeIcon(item.type);
-              const status = getStatus(item);
+              const itemKey = `${item.type}-${item.id}`;
               return (
                 <div
-                  key={`${item.type}-${item.id}`}
+                  key={itemKey}
                   className="flex items-center gap-3 sm:gap-4 p-3 rounded-lg bg-card/60 border border-border/30 hover:bg-card/80 hover:border-ars/20 transition-all cursor-pointer group"
                   onClick={() => onItemClick(item)}
                 >
@@ -459,19 +591,71 @@ export default function AllContentSection({
                           {getYear(item.releaseDate)}
                         </span>
                       )}
+                      {item.addedAt && (
+                        <span className="flex items-center gap-0.5">
+                          <Clock className="h-3 w-3" />
+                          {getRelativeTime(item.addedAt)}
+                        </span>
+                      )}
+                      {/* Progress for TV/Anime */}
+                      {(item.type === 'tv' || item.type === 'anime') && (() => {
+                        const progress = getWatchProgress(item.id, item.type);
+                        if (progress && progress.currentEpisode && progress.totalEpisodes) {
+                          const pct = Math.round((progress.currentEpisode / progress.totalEpisodes) * 100);
+                          return (
+                            <span className="flex items-center gap-1">
+                              <span className="inline-block w-12 h-1.5 bg-muted rounded-full overflow-hidden">
+                                <span className="block h-full bg-ars rounded-full" style={{ width: `${pct}%` }} />
+                              </span>
+                              <span>S{progress.currentSeason}E{progress.currentEpisode}</span>
+                            </span>
+                          );
+                        }
+                        return null;
+                      })()}
                     </div>
                   </div>
 
-                  {/* WatchList status indicator */}
+                  {/* Actions */}
                   <div className="flex items-center gap-1.5 flex-shrink-0">
-                    {status && (
-                      <span className={`inline-flex items-center gap-1 px-2 py-1 text-[10px] font-semibold uppercase rounded text-white ${
-                        status === 'watching' ? 'bg-emerald-500' : status === 'watchlist' ? 'bg-amber-500' : 'bg-sky-500'
-                      }`}>
-                        {status === 'watching' ? '👁️' : status === 'watchlist' ? '📋' : '✅'}
-                        <span className="hidden sm:inline">{status === 'watching' ? 'Watching' : status === 'watchlist' ? 'List' : 'Done'}</span>
-                      </span>
-                    )}
+                    {/* Move to other category button */}
+                    <div className="relative">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setMoveDropdownItem(moveDropdownItem === itemKey ? null : itemKey); }}
+                        className="p-1.5 rounded-full bg-muted/50 text-muted-foreground hover:bg-ars/10 hover:text-ars transition-colors"
+                        aria-label="Move to another list"
+                      >
+                        <MoveRight className="h-4 w-4" />
+                      </button>
+                      {moveDropdownItem === itemKey && (
+                        <>
+                          <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setMoveDropdownItem(null); }} />
+                          <div className="absolute right-0 top-full mt-1 z-50 w-40 bg-popover border border-border rounded-lg shadow-xl py-1">
+                            {otherCategories.map((cat) => {
+                              const CatIcon = cat.icon;
+                              return (
+                                <button
+                                  key={cat.key}
+                                  onClick={(e) => { e.stopPropagation(); handleMoveItem(item, cat.key); }}
+                                  className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 hover:bg-ars/10 transition-colors text-foreground"
+                                >
+                                  <CatIcon className="h-3 w-3" />
+                                  <span>Move to {cat.label}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                    {/* Remove button */}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onRemoveFromList(item.id, item.type); }}
+                      className="p-1.5 rounded-full bg-muted/50 text-muted-foreground hover:bg-red-500/10 hover:text-red-500 transition-colors"
+                      aria-label="Remove from list"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
                   </div>
                 </div>
               );
@@ -481,10 +665,10 @@ export default function AllContentSection({
       )}
 
       {/* Footer count */}
-      {filteredItems.length > 0 && (
+      {filteredItems.length > 0 && categoryItems.length > 0 && (
         <div className="px-4 sm:px-6 lg:px-8 pt-2">
           <p className="text-xs text-muted-foreground text-center">
-            Showing {filteredItems.length} of {items.length} title{items.length !== 1 ? 's' : ''}
+            Showing {filteredItems.length} of {categoryItems.length} {getCategoryLabel(activeCategory).toLowerCase()} item{categoryItems.length !== 1 ? 's' : ''}
             {searchQuery && ` · Matching "${searchQuery}"`}
             {activeFilter !== 'all' && ` · Filtered by ${activeFilter}`}
           </p>

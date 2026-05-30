@@ -1,7 +1,8 @@
 import { create } from 'zustand';
+import type { WatchListCategory } from '@/lib/storage';
 
 export type ContentType = 'movie' | 'tv' | 'anime';
-export type ActiveSection = 'home' | 'search' | 'live-tv' | 'favorites' | 'continue-watching' | 'all-content' | string;
+export type ActiveSection = 'home' | 'search' | 'live-tv' | 'my-lists' | 'continue-watching' | 'all-content' | 'recommendations' | 'settings' | 'dashboard' | 'activity' | string;
 
 export interface ContentItem {
   id: number;
@@ -21,8 +22,9 @@ export interface ContentItem {
   status?: string;
   genres?: { mal_id: number; name: string }[];
   score?: number;
-  // Favorites-specific
+  // WatchList-specific
   addedAt?: number;
+  watchListCategory?: WatchListCategory;
 }
 
 export interface ContentDetail extends ContentItem {
@@ -65,6 +67,15 @@ interface AppState {
   sectionData: Record<string, ContentItem[]>;
   sectionLoading: Record<string, boolean>;
   sectionError: Record<string, string | null>;
+  sectionPages: Record<string, number>;
+  sectionHasMore: Record<string, boolean>;
+
+  // PiP State
+  pipTrailerKey: string | null;
+  pipTrailerTitle: string | null;
+
+  // Parental Controls State
+  kidsModeEnabled: boolean;
 
   // Actions
   setActiveSection: (section: ActiveSection) => void;
@@ -77,8 +88,13 @@ interface AppState {
   setSearchResults: (results: SearchResult | null) => void;
   setIsSearching: (searching: boolean) => void;
   setSectionData: (sectionId: string, data: ContentItem[]) => void;
+  appendSectionData: (sectionId: string, data: ContentItem[]) => void;
   setSectionLoading: (sectionId: string, loading: boolean) => void;
   setSectionError: (sectionId: string, error: string | null) => void;
+  setSectionPage: (sectionId: string, page: number) => void;
+  setSectionHasMore: (sectionId: string, hasMore: boolean) => void;
+  setPipTrailer: (key: string | null, title: string | null) => void;
+  setKidsModeEnabled: (enabled: boolean) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -99,6 +115,15 @@ export const useAppStore = create<AppState>((set) => ({
   sectionData: {},
   sectionLoading: {},
   sectionError: {},
+  sectionPages: {},
+  sectionHasMore: {},
+
+  // PiP State
+  pipTrailerKey: null,
+  pipTrailerTitle: null,
+
+  // Parental Controls State
+  kidsModeEnabled: false,
 
   // Actions
   setActiveSection: (section) => set({ activeSection: section, mobileSidebarOpen: false }),
@@ -116,6 +141,17 @@ export const useAppStore = create<AppState>((set) => ({
       sectionLoading: { ...state.sectionLoading, [sectionId]: false },
       sectionError: { ...state.sectionError, [sectionId]: null },
     })),
+  appendSectionData: (sectionId, newData) =>
+    set((state) => {
+      const existing = state.sectionData[sectionId] || [];
+      // Deduplicate by type-id
+      const existingKeys = new Set(existing.map(i => `${i.type}-${i.id}`));
+      const uniqueNew = newData.filter(i => !existingKeys.has(`${i.type}-${i.id}`));
+      return {
+        sectionData: { ...state.sectionData, [sectionId]: [...existing, ...uniqueNew] },
+        sectionLoading: { ...state.sectionLoading, [sectionId]: false },
+      };
+    }),
   setSectionLoading: (sectionId, loading) =>
     set((state) => ({
       sectionLoading: { ...state.sectionLoading, [sectionId]: loading },
@@ -125,4 +161,16 @@ export const useAppStore = create<AppState>((set) => ({
       sectionLoading: { ...state.sectionLoading, [sectionId]: false },
       sectionError: { ...state.sectionError, [sectionId]: error },
     })),
+  setSectionPage: (sectionId, page) =>
+    set((state) => ({
+      sectionPages: { ...state.sectionPages, [sectionId]: page },
+    })),
+  setSectionHasMore: (sectionId, hasMore) =>
+    set((state) => ({
+      sectionHasMore: { ...state.sectionHasMore, [sectionId]: hasMore },
+    })),
+  setPipTrailer: (key, title) =>
+    set({ pipTrailerKey: key, pipTrailerTitle: title }),
+  setKidsModeEnabled: (enabled) =>
+    set({ kidsModeEnabled: enabled }),
 }));
