@@ -21,7 +21,8 @@ export const metadata: Metadata = {
   authors: [{ name: "AR-Stream" }],
   icons: {
     icon: [
-      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/favicon.ico", sizes: "48x48" },
+      { url: "/logo.svg", type: "image/svg+xml" },
     ],
     apple: "/apple-touch-icon.png",
   },
