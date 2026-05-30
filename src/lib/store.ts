@@ -27,6 +27,13 @@ export interface ContentItem {
   watchListCategory?: WatchListCategory;
 }
 
+export interface SeasonInfo {
+  seasonNumber: number;
+  name: string;
+  episodeCount: number;
+  airDate?: string;
+}
+
 export interface ContentDetail extends ContentItem {
   tagline?: string;
   runtime?: number;
@@ -40,6 +47,7 @@ export interface ContentDetail extends ContentItem {
   homepage?: string;
   networks?: { id: number; name: string; logo_path: string | null }[];
   nextEpisodeToAir?: { id: number; name: string; air_date: string };
+  seasons?: SeasonInfo[];
 }
 
 export interface SearchResult {

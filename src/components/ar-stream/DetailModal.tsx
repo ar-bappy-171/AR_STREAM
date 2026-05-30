@@ -34,7 +34,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ContentCard } from '@/components/ar-stream/ContentCard';
 import { PersonModal } from '@/components/ar-stream/PersonModal';
 import EpisodeTracker from '@/components/ar-stream/EpisodeTracker';
-import type { ContentDetail, ContentItem } from '@/lib/store';
+import type { ContentDetail, ContentItem, SeasonInfo } from '@/lib/store';
 import type { WatchListCategory } from '@/lib/storage';
 
 // ─── Image URL helpers ──────────────────────────────────────────────
@@ -265,6 +265,20 @@ export function DetailModal({
 
       if (detailRes.status === 'fulfilled' && detailRes.value.ok) {
         const data = await detailRes.value.json();
+
+        // Extract per-season episode counts from TMDB
+        let seasonsInfo: SeasonInfo[] | undefined;
+        if (data.seasons && Array.isArray(data.seasons)) {
+          seasonsInfo = data.seasons
+            .filter((s: { season_number: number }) => s.season_number > 0) // exclude specials (season 0)
+            .map((s: { season_number: number; name: string; episode_count: number; air_date?: string }) => ({
+              seasonNumber: s.season_number,
+              name: s.name,
+              episodeCount: s.episode_count,
+              airDate: s.air_date,
+            }));
+        }
+
         mergedDetail = {
           ...mergedDetail,
           tagline: data.tagline || content.tagline,
@@ -284,6 +298,7 @@ export function DetailModal({
           posterPath: data.poster_path || content.posterPath,
           title: data.title || data.name || content.title,
           originalTitle: data.original_title || data.original_name || content.originalTitle,
+          seasons: seasonsInfo || content.seasons,
         };
       }
 
@@ -817,6 +832,7 @@ export function DetailModal({
                         title={displayData.title}
                         totalSeasons={displayData.numberOfSeasons || (displayData.type === 'anime' && displayData.episodes ? 1 : undefined)}
                         totalEpisodes={displayData.numberOfEpisodes || displayData.episodes}
+                        seasons={displayData.seasons}
                         onProgressUpdate={onWatchProgressUpdate}
                       />
                     </section>

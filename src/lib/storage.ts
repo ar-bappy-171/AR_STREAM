@@ -45,6 +45,8 @@ export interface WatchListItem {
   currentEpisode?: number;
   totalSeasons?: number;
   totalEpisodes?: number;
+  // Per-season episode counts: { "1": 10, "2": 8, "3": 12 }
+  seasonEpisodeCounts?: Record<string, number>;
 }
 
 export type ColorTheme = 'default' | 'ocean' | 'forest' | 'midnight' | 'sunset';
@@ -504,6 +506,26 @@ export function updateWatchTotals(id: number, type: string, totalSeasons: number
   } catch {
     // Storage unavailable
   }
+}
+
+export function updateSeasonEpisodeCounts(id: number, type: string, counts: Record<string, number>): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const items = getWatchList();
+    const idx = items.findIndex(i => i.id === id && i.type === type);
+    if (idx !== -1) {
+      items[idx].seasonEpisodeCounts = counts;
+      localStorage.setItem(STORAGE_KEYS.WATCHLIST, JSON.stringify(items));
+    }
+  } catch {
+    // Storage unavailable
+  }
+}
+
+export function getSeasonEpisodeCounts(id: number, type: string): Record<string, number> | null {
+  const items = getWatchList();
+  const item = items.find(i => i.id === id && i.type === type);
+  return item?.seasonEpisodeCounts || null;
 }
 
 // ─── Parental Controls ──────────────────────────────────────────────

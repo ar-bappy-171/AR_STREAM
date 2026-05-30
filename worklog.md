@@ -45,3 +45,30 @@ Stage Summary:
 - EpisodeTracker now visible inside DetailModal for TV/anime content
 - Smart prompt shown when not in watchlist, full tracker when in list
 - Lint clean, compilation successful
+
+---
+Task ID: 3
+Agent: Main Coordinator
+Task: Fix EpisodeTracker bug - season change resets episode count to zero + UX improvements
+
+Work Log:
+- Root cause: totalEpisodes was a flat number across ALL seasons, not per-season. When switching seasons, episode stepper max stayed at grand total (e.g. 50) instead of per-season count (e.g. 10)
+- Added SeasonInfo type to store.ts with seasonNumber, name, episodeCount, airDate
+- Added seasonEpisodeCounts field to WatchListItem in storage.ts (Record<string, number>)
+- Added updateSeasonEpisodeCounts() and getSeasonEpisodeCounts() storage functions
+- Updated DetailModal to extract seasons array from TMDB API response and pass to EpisodeTracker
+- Completely redesigned EpisodeTracker with:
+  - Season pill/tab selector (visual tabs for each season with completion checkmarks)
+  - Per-season episode count from TMDB data (not flat total)
+  - Episode stepper with minus/plus buttons and clear "X / Y" display
+  - Season-specific progress bar with percentage
+  - Overall progress bar for multi-season shows (total watched / total episodes)
+  - 3 action buttons: Next Episode, Complete Season, Complete Show
+  - Smart status badges: "All Done!", "Season Complete", "S1E5"
+  - Fallback: evenly distributes episodes across seasons if TMDB season data unavailable
+
+Stage Summary:
+- Bug fixed: season change now correctly shows per-season episode count
+- UX significantly improved with visual season tabs, dual progress bars, and clear actions
+- Per-season data persisted in localStorage via seasonEpisodeCounts
+- Lint clean, compiles successfully
