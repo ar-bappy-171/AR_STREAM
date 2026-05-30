@@ -92,8 +92,11 @@ export default function Header() {
             className="flex items-center gap-1.5 shrink-0 group"
             aria-label="AR-Stream Home"
           >
-            <div className="relative flex items-center justify-center size-8 rounded-lg overflow-hidden shadow-lg shadow-ars/20 group-hover:shadow-ars/40 transition-shadow duration-300">
-              <img src="/logo.svg" alt="AR-Stream" className="w-full h-full" />
+            <div className="relative flex items-center justify-center size-8 rounded-lg overflow-hidden shadow-lg shadow-ars/20 group-hover:shadow-ars/40 transition-shadow duration-300 bg-black">
+              <svg viewBox="0 0 512 512" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="256" cy="256" r="256" fill="#000000"/>
+                <polygon points="192,140 192,372 392,256" fill="#ffffff"/>
+              </svg>
             </div>
             <span className="text-xl font-extrabold tracking-tight bg-gradient-to-r from-ars via-orange-400 to-amber-400 bg-clip-text text-transparent">
               AR-Stream
