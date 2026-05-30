@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { useTheme } from 'next-themes';
-import { Search, Menu, Sun, Moon, ListChecks, Play, Lock } from 'lucide-react';
+import { Search, Menu, Sun, Moon, ListChecks, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAppStore } from '@/lib/store';
@@ -92,8 +92,8 @@ export default function Header() {
             className="flex items-center gap-1.5 shrink-0 group"
             aria-label="AR-Stream Home"
           >
-            <div className="relative flex items-center justify-center size-8 rounded-lg bg-gradient-to-br from-ars to-orange-500 shadow-lg shadow-ars/20 group-hover:shadow-ars/40 transition-shadow duration-300">
-              <Play className="size-4 text-white fill-white ml-0.5" />
+            <div className="relative flex items-center justify-center size-8 rounded-lg overflow-hidden shadow-lg shadow-ars/20 group-hover:shadow-ars/40 transition-shadow duration-300">
+              <img src="/logo.svg" alt="AR-Stream" className="w-full h-full" />
             </div>
             <span className="text-xl font-extrabold tracking-tight bg-gradient-to-r from-ars via-orange-400 to-amber-400 bg-clip-text text-transparent">
               AR-Stream

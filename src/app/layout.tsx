@@ -20,7 +20,12 @@ export const metadata: Metadata = {
   keywords: ["AR-Stream", "movies", "TV shows", "anime", "streaming", "entertainment", "TMDB", "MyAnimeList"],
   authors: [{ name: "AR-Stream" }],
   icons: {
-    icon: "/logo.svg",
+    icon: [
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon-48x48.png", sizes: "48x48", type: "image/png" },
+    ],
+    apple: "/apple-touch-icon.png",
   },
   openGraph: {
     title: "AR-Stream",
@@ -38,6 +43,8 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="manifest" href="/manifest.json" />
+        <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
         <meta name="theme-color" content="#e85d04" />
         {/* Apply color theme BEFORE React hydration to prevent flash */}
         <script
