@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AR-Stream — Movies, TV Shows & Anime</title>
+  <meta name="description" content="AR-Stream: Your gateway to movies, TV shows, and anime from around the world. Discover, explore, and enjoy unlimited streaming.">
+  <meta name="keywords" content="movies, TV shows, anime, streaming, watch movies online, free streaming, AR-Stream">
+  <meta property="og:title" content="AR-Stream — Movies, TV Shows & Anime">
+  <meta property="og:description" content="Discover, explore, and enjoy unlimited movies, TV shows, and anime.">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  
+  <style>
+    /* ===== RESET & BASE ===== */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    :root {
+      --ars: #e8450e;
+      --ars-light: #ff6b35;
+      --ars-dark: #c23500;
+      --bg-dark: #0d0f1a;
+      --bg-card: #151829;
+      --bg-card-hover: #1c2038;
+      --text-primary: #f1f1f5;
+      --text-secondary: #9ca3af;
+      --text-muted: #6b7280;
+      --gradient-1: linear-gradient(135deg, #e8450e 0%, #ff6b35 50%, #f59e0b 100%);
+      --gradient-2: linear-gradient(135deg, #e8450e 0%, #dc2626 100%);
+      --shadow-glow: 0 0 40px rgba(232, 69, 14, 0.3);
+      --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    html { scroll-behavior: smooth; }
+    
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-dark);
+      color: var(--text-primary);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* ===== ANIMATIONS ===== */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+    @keyframes pulse-glow {
+      0%, 100% { box-shadow: 0 0 20px rgba(232, 69, 14, 0.4); }
+      50% { box-shadow: 0 0 40px rgba(232, 69, 14, 0.7); }
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(-20px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes shimmer {
+      0% { background-position: -200% center; }
+      100% { background-position: 200% center; }
+    }
+
+    .animate-fade-up { animation: fadeInUp 0.8s ease-out forwards; }
+    .animate-fade-in { animation: fadeIn 0.6s ease-out forwards; }
+    .animate-float { animation: float 3s ease-in-out infinite; }
+    .animate-slide-in { animation: slideIn 0.6s ease-out forwards; }
+    .delay-1 { animation-delay: 0.1s; opacity: 0; }
+    .delay-2 { animation-delay: 0.2s; opacity: 0; }
+    .delay-3 { animation-delay: 0.3s; opacity: 0; }
+    .delay-4 { animation-delay: 0.4s; opacity: 0; }
+    .delay-5 { animation-delay: 0.5s; opacity: 0; }
+
+    /* ===== NAVBAR ===== */
+    .navbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      padding: 1rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(13, 15, 26, 0.85);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      transition: all 0.3s ease;
+    }
+    .navbar.scrolled {
+      padding: 0.6rem 2rem;
+      background: rgba(13, 15, 26, 0.95);
+    }
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      text-decoration: none;
+    }
+    .nav-logo-icon {
+      width: 36px;
+      height: 36px;
+      background: var(--gradient-1);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 15px rgba(232, 69, 14, 0.3);
+    }
+    .nav-logo-icon svg { width: 18px; height: 18px; fill: white; margin-left: 2px; }
+    .nav-logo-text {
+      font-size: 1.4rem;
+      font-weight: 900;
+      background: var(--gradient-1);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -0.5px;
+    }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+      list-style: none;
+    }
+    .nav-links a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: color 0.3s;
+    }
+    .nav-links a:hover { color: var(--ars-light); }
+    .nav-cta {
+      padding: 0.5rem 1.5rem;
+      background: var(--gradient-1);
+      color: white !important;
+      border-radius: 8px;
+      font-weight: 600;
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+    .nav-cta:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-glow);
+    }
+    .nav-mobile-btn {
+      display: none;
+      background: none;
+      border: none;
+      color: var(--text-primary);
+      cursor: pointer;
+      padding: 0.5rem;
+    }
+
+    /* ===== HERO SECTION ===== */
+    .hero {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8rem 2rem 4rem;
+      overflow: hidden;
+    }
+    .hero-bg {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 30% 50%, rgba(232, 69, 14, 0.12) 0%, transparent 60%),
+                  radial-gradient(ellipse at 70% 80%, rgba(245, 158, 11, 0.08) 0%, transparent 50%),
+                  var(--bg-dark);
+    }
+    .hero-grid {
+      position: absolute;
+      inset: 0;
+      background-image: 
+        linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+      background-size: 60px 60px;
+    }
+    .hero-content {
+      position: relative;
+      z-index: 2;
+      text-align: center;
+      max-width: 800px;
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.4rem 1rem;
+      background: rgba(232, 69, 14, 0.15);
+      border: 1px solid rgba(232, 69, 14, 0.3);
+      border-radius: 50px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--ars-light);
+      margin-bottom: 1.5rem;
+    }
+    .hero-badge-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--ars);
+      border-radius: 50%;
+      animation: pulse-glow 2s ease-in-out infinite;
+    }
+    .hero-title {
+      font-size: clamp(2.5rem, 6vw, 4.5rem);
+      font-weight: 900;
+      line-height: 1.1;
+      margin-bottom: 1.5rem;
+      letter-spacing: -1px;
+    }
+    .hero-title-gradient {
+      background: var(--gradient-1);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero-description {
+      font-size: 1.15rem;
+      color: var(--text-secondary);
+      max-width: 600px;
+      margin: 0 auto 2.5rem;
+      line-height: 1.7;
+    }
+    .hero-buttons {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 1rem 2.5rem;
+      background: var(--gradient-1);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 1.05rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      transition: transform 0.3s, box-shadow 0.3s;
+      box-shadow: 0 4px 20px rgba(232, 69, 14, 0.4);
+    }
+    .btn-primary:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 40px rgba(232, 69, 14, 0.5);
+    }
+    .btn-primary svg { width: 20px; height: 20px; fill: white; }
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 1rem 2rem;
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-primary);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.3s;
+    }
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-2px);
+    }
+    
+    /* Floating movie cards decoration */
+    .hero-floating {
+      position: absolute;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+      opacity: 0.3;
+      animation: float 4s ease-in-out infinite;
+    }
+    .hero-floating-1 { top: 15%; left: 5%; width: 120px; height: 180px; animation-delay: 0s; background: var(--bg-card); }
+    .hero-floating-2 { top: 20%; right: 5%; width: 100px; height: 150px; animation-delay: 1s; background: var(--bg-card); }
+    .hero-floating-3 { bottom: 15%; left: 8%; width: 90px; height: 135px; animation-delay: 2s; background: var(--bg-card); }
+    .hero-floating-4 { bottom: 20%; right: 8%; width: 110px; height: 165px; animation-delay: 1.5s; background: var(--bg-card); }
+
+    /* ===== FEATURES SECTION ===== */
+    .features {
+      padding: 6rem 2rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .section-header {
+      text-align: center;
+      margin-bottom: 4rem;
+    }
+    .section-label {
+      display: inline-block;
+      padding: 0.3rem 0.8rem;
+      background: rgba(232, 69, 14, 0.15);
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--ars-light);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 1rem;
+    }
+    .section-title {
+      font-size: clamp(1.8rem, 4vw, 2.8rem);
+      font-weight: 800;
+      margin-bottom: 1rem;
+      letter-spacing: -0.5px;
+    }
+    .section-subtitle {
+      font-size: 1.05rem;
+      color: var(--text-secondary);
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+    }
+    .feature-card {
+      padding: 2rem;
+      background: var(--bg-card);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 16px;
+      transition: all 0.3s ease;
+    }
+    .feature-card:hover {
+      background: var(--bg-card-hover);
+      border-color: rgba(232, 69, 14, 0.2);
+      transform: translateY(-5px);
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    }
+    .feature-icon {
+      width: 50px;
+      height: 50px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      margin-bottom: 1.2rem;
+    }
+    .feature-icon-orange { background: rgba(232, 69, 14, 0.15); }
+    .feature-icon-green { background: rgba(34, 197, 94, 0.15); }
+    .feature-icon-purple { background: rgba(168, 85, 247, 0.15); }
+    .feature-icon-blue { background: rgba(59, 130, 246, 0.15); }
+    .feature-icon-yellow { background: rgba(245, 158, 11, 0.15); }
+    .feature-icon-pink { background: rgba(236, 72, 153, 0.15); }
+    .feature-card h3 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin-bottom: 0.6rem;
+    }
+    .feature-card p {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    /* ===== CATEGORIES SECTION ===== */
+    .categories {
+      padding: 6rem 2rem;
+      background: rgba(255, 255, 255, 0.02);
+    }
+    .categories-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .categories-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+    .category-card {
+      position: relative;
+      padding: 2rem 1.5rem;
+      border-radius: 16px;
+      text-align: center;
+      text-decoration: none;
+      overflow: hidden;
+      transition: all 0.3s ease;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .category-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .category-card:hover {
+      transform: translateY(-5px);
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+    .category-card:hover::before { opacity: 1; }
+    .cat-action { background: rgba(232, 69, 14, 0.08); }
+    .cat-action::before { background: rgba(232, 69, 14, 0.15); }
+    .cat-tv { background: rgba(34, 197, 94, 0.08); }
+    .cat-tv::before { background: rgba(34, 197, 94, 0.15); }
+    .cat-anime { background: rgba(168, 85, 247, 0.08); }
+    .cat-anime::before { background: rgba(168, 85, 247, 0.15); }
+    .cat-bollywood { background: rgba(245, 158, 11, 0.08); }
+    .cat-bollywood::before { background: rgba(245, 158, 11, 0.15); }
+    .cat-kdrama { background: rgba(236, 72, 153, 0.08); }
+    .cat-kdrama::before { background: rgba(236, 72, 153, 0.15); }
+    .cat-horror { background: rgba(220, 38, 38, 0.08); }
+    .cat-horror::before { background: rgba(220, 38, 38, 0.15); }
+    .category-emoji {
+      font-size: 2.5rem;
+      margin-bottom: 0.8rem;
+      display: block;
+    }
+    .category-card h3 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 0.3rem;
+    }
+    .category-card p {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+
+    /* ===== CTA SECTION ===== */
+    .cta {
+      padding: 6rem 2rem;
+      text-align: center;
+    }
+    .cta-box {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 4rem 3rem;
+      background: var(--bg-card);
+      border: 1px solid rgba(232, 69, 14, 0.2);
+      border-radius: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+    .cta-box::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle at center, rgba(232, 69, 14, 0.08) 0%, transparent 50%);
+    }
+    .cta-content { position: relative; z-index: 1; }
+    .cta-title {
+      font-size: clamp(1.8rem, 4vw, 2.5rem);
+      font-weight: 800;
+      margin-bottom: 1rem;
+    }
+    .cta-description {
+      font-size: 1.05rem;
+      color: var(--text-secondary);
+      max-width: 500px;
+      margin: 0 auto 2rem;
+    }
+
+    /* ===== STATS BAR ===== */
+    .stats {
+      padding: 3rem 2rem;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.5rem;
+    }
+    .stat-item {
+      text-align: center;
+      padding: 1.5rem;
+      background: var(--bg-card);
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .stat-number {
+      font-size: 2rem;
+      font-weight: 900;
+      background: var(--gradient-1);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .stat-label {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      margin-top: 0.3rem;
+    }
+
+    /* ===== FOOTER ===== */
+    .footer {
+      padding: 3rem 2rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      text-align: center;
+    }
+    .footer-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .footer-logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    .footer-logo-icon {
+      width: 28px;
+      height: 28px;
+      background: var(--gradient-1);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .footer-logo-icon svg { width: 14px; height: 14px; fill: white; margin-left: 1px; }
+    .footer-logo-text {
+      font-size: 1.1rem;
+      font-weight: 800;
+      background: var(--gradient-1);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .footer p {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      line-height: 1.8;
+    }
+    .footer a {
+      color: var(--ars-light);
+      text-decoration: none;
+    }
+    .footer a:hover { text-decoration: underline; }
+    .footer-disclaimer {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      opacity: 0.6;
+      margin-top: 1rem;
+    }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 768px) {
+      .nav-links { display: none; }
+      .nav-mobile-btn { display: block; }
+      .hero { padding: 7rem 1.5rem 3rem; }
+      .hero-floating { display: none; }
+      .hero-title { font-size: 2.2rem; }
+      .features-grid { grid-template-columns: 1fr; }
+      .categories-grid { grid-template-columns: repeat(2, 1fr); }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .cta-box { padding: 3rem 1.5rem; }
+      .hero-buttons { flex-direction: column; }
+      .btn-primary, .btn-secondary { width: 100%; justify-content: center; }
+    }
+    @media (max-width: 480px) {
+      .categories-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ===== NAVBAR ===== -->
+  <nav class="navbar" id="navbar">
+    <a href="#" class="nav-logo">
+      <div class="nav-logo-icon">
+        <svg viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21"/></svg>
+      </div>
+      <span class="nav-logo-text">AR-Stream</span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="#features">Features</a></li>
+      <li><a href="#categories">Categories</a></li>
+      <li><a href="https://github.com/ar-bappy-171/AR_STREAM" target="_blank">GitHub</a></li>
+      <li><a href="YOUR_VERCEL_URL" class="nav-cta" target="_blank">Watch Now</a></li>
+    </ul>
+    <button class="nav-mobile-btn" onclick="document.querySelector('.hero-buttons').scrollIntoView({behavior:'smooth'})">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+  </nav>
+
+  <!-- ===== HERO SECTION ===== -->
+  <section class="hero">
+    <div class="hero-bg"></div>
+    <div class="hero-grid"></div>
+    
+    <!-- Floating decorations -->
+    <div class="hero-floating hero-floating-1"></div>
+    <div class="hero-floating hero-floating-2"></div>
+    <div class="hero-floating hero-floating-3"></div>
+    <div class="hero-floating hero-floating-4"></div>
+
+    <div class="hero-content">
+      <div class="hero-badge animate-fade-up delay-1">
+        <span class="hero-badge-dot"></span>
+        Free Streaming Aggregator
+      </div>
+      <h1 class="hero-title animate-fade-up delay-2">
+        Unlimited <span class="hero-title-gradient">Movies, TV Shows</span> & Anime
+      </h1>
+      <p class="hero-description animate-fade-up delay-3">
+        Discover, explore, and enjoy content from around the world. Trending movies, popular TV series, top anime — all in one place.
+      </p>
+      <div class="hero-buttons animate-fade-up delay-4">
+        <a href="YOUR_VERCEL_URL" class="btn-primary" target="_blank">
+          <svg viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21"/></svg>
+          Watch Now — It's Free
+        </a>
+        <a href="#features" class="btn-secondary">
+          Learn More ↓
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== STATS ===== -->
+  <section class="stats">
+    <div class="stats-grid">
+      <div class="stat-item animate-fade-up delay-1">
+        <div class="stat-number">500K+</div>
+        <div class="stat-label">Movies & Shows</div>
+      </div>
+      <div class="stat-item animate-fade-up delay-2">
+        <div class="stat-number">50K+</div>
+        <div class="stat-label">Anime Titles</div>
+      </div>
+      <div class="stat-item animate-fade-up delay-3">
+        <div class="stat-number">100%</div>
+        <div class="stat-label">Free to Use</div>
+      </div>
+      <div class="stat-item animate-fade-up delay-4">
+        <div class="stat-number">0</div>
+        <div class="stat-label">Ads or Signups</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== FEATURES ===== -->
+  <section class="features" id="features">
+    <div class="section-header">
+      <span class="section-label">Features</span>
+      <h2 class="section-title">Everything You Need</h2>
+      <p class="section-subtitle">A complete streaming aggregator with powerful features to discover and enjoy content.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card animate-fade-up delay-1">
+        <div class="feature-icon feature-icon-orange">🎬</div>
+        <h3>Trending Movies</h3>
+        <p>Stay updated with the latest trending and popular movies from TMDB. New releases, box office hits, and hidden gems.</p>
+      </div>
+      <div class="feature-card animate-fade-up delay-2">
+        <div class="feature-icon feature-icon-green">📺</div>
+        <h3>TV Shows & Series</h3>
+        <p>Browse top-rated TV series, upcoming seasons, and binge-worthy shows. Track episodes and discover new series.</p>
+      </div>
+      <div class="feature-card animate-fade-up delay-3">
+        <div class="feature-icon feature-icon-purple">✨</div>
+        <h3>Anime Collection</h3>
+        <p>Explore anime from MyAnimeList — top airing, most popular, seasonal picks, and upcoming releases all in one place.</p>
+      </div>
+      <div class="feature-card animate-fade-up delay-1">
+        <div class="feature-icon feature-icon-blue">🔍</div>
+        <h3>Smart Search</h3>
+        <p>Search across movies, TV shows, and anime simultaneously. Filter by type and find exactly what you're looking for.</p>
+      </div>
+      <div class="feature-card animate-fade-up delay-2">
+        <div class="feature-icon feature-icon-yellow">❤️</div>
+        <h3>Favorites & Watchlist</h3>
+        <p>Save your favorite content with categorized, searchable, and sortable favorites. Never lose track of what you love.</p>
+      </div>
+      <div class="feature-card animate-fade-up delay-3">
+        <div class="feature-icon feature-icon-pink">🌙</div>
+        <h3>Dark & Light Mode</h3>
+        <p>Beautiful in both themes. Switch between dark and light mode for comfortable viewing anytime, day or night.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== CATEGORIES ===== -->
+  <section class="categories" id="categories">
+    <div class="categories-inner">
+      <div class="section-header">
+        <span class="section-label">Categories</span>
+        <h2 class="section-title">Explore by Genre</h2>
+        <p class="section-subtitle">From action blockbusters to anime — find your next favorite.</p>
+      </div>
+      <div class="categories-grid">
+        <a href="YOUR_VERCEL_URL" class="category-card cat-action" target="_blank">
+          <span class="category-emoji">💥</span>
+          <h3>Action</h3>
+          <p>Explosive thrills</p>
+        </a>
+        <a href="YOUR_VERCEL_URL" class="category-card cat-tv" target="_blank">
+          <span class="category-emoji">🎭</span>
+          <h3>Drama</h3>
+          <p>Compelling stories</p>
+        </a>
+        <a href="YOUR_VERCEL_URL" class="category-card cat-anime" target="_blank">
+          <span class="category-emoji">⛩️</span>
+          <h3>Anime</h3>
+          <p>Japanese animation</p>
+        </a>
+        <a href="YOUR_VERCEL_URL" class="category-card cat-bollywood" target="_blank">
+          <span class="category-emoji">🇮🇳</span>
+          <h3>Bollywood</h3>
+          <p>Hindi cinema hits</p>
+        </a>
+        <a href="YOUR_VERCEL_URL" class="category-card cat-kdrama" target="_blank">
+          <span class="category-emoji">🇰🇷</span>
+          <h3>K-Drama</h3>
+          <p>Korean series</p>
+        </a>
+        <a href="YOUR_VERCEL_URL" class="category-card cat-horror" target="_blank">
+          <span class="category-emoji">👻</span>
+          <h3>Horror</h3>
+          <p>Scary movies</p>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== CTA SECTION ===== -->
+  <section class="cta">
+    <div class="cta-box">
+      <div class="cta-content">
+        <h2 class="cta-title">Ready to Start <span class="hero-title-gradient">Watching?</span></h2>
+        <p class="cta-description">
+          No signups, no ads, no subscriptions. Just pure entertainment — movies, TV shows, and anime, all for free.
+        </p>
+        <a href="YOUR_VERCEL_URL" class="btn-primary" target="_blank">
+          <svg viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21"/></svg>
+          Open AR-Stream Now
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== FOOTER ===== -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <div class="footer-logo">
+        <div class="footer-logo-icon">
+          <svg viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21"/></svg>
+        </div>
+        <span class="footer-logo-text">AR-Stream</span>
+      </div>
+      <p>
+        Your gateway to movies, TV shows, and anime from around the world.<br>
+        Powered by <a href="https://www.themoviedb.org/" target="_blank" rel="noopener">TMDB</a> &amp; 
+        <a href="https://jikan.moe/" target="_blank" rel="noopener">Jikan/MAL</a>.
+      </p>
+      <p class="footer-disclaimer">
+        For educational and personal use only. We do not host any streams. All content is sourced from third-party APIs.<br>
+        This product uses the TMDB API but is not endorsed or certified by TMDB.<br>
+        &copy; 2024 AR-Stream. All rights reserved.
+      </p>
+    </div>
+  </footer>
+
+  <!-- ===== SCRIPTS ===== -->
+  <script>
+    // Navbar scroll effect
+    window.addEventListener('scroll', () => {
+      const navbar = document.getElementById('navbar');
+      if (window.scrollY > 50) {
+        navbar.classList.add('scrolled');
+      } else {
+        navbar.classList.remove('scrolled');
+      }
+    });
+
+    // Intersection Observer for scroll animations
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.style.animationPlayState = 'running';
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.animate-fade-up, .animate-slide-in').forEach(el => {
+      el.style.animationPlayState = 'paused';
+      observer.observe(el);
+    });
+
+    // Hero animations should play immediately
+    document.querySelectorAll('.hero .animate-fade-up').forEach(el => {
+      el.style.animationPlayState = 'running';
+    });
+  </script>
+
+</body>
+</html>
