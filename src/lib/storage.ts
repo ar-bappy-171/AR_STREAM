@@ -49,7 +49,7 @@ export interface WatchListItem {
   seasonEpisodeCounts?: Record<string, number>;
 }
 
-export type ColorTheme = 'default' | 'ocean' | 'forest' | 'midnight' | 'sunset';
+export type ColorTheme = 'default' | 'ocean' | 'forest' | 'midnight' | 'sunset' | 'monochrome';
 
 export interface ActivityEntry {
   id: string;
@@ -443,7 +443,7 @@ export function getColorTheme(): ColorTheme {
   if (typeof window === 'undefined') return 'default';
   try {
     const stored = localStorage.getItem(COLOR_THEME_KEY);
-    const valid: ColorTheme[] = ['default', 'ocean', 'forest', 'midnight', 'sunset'];
+    const valid: ColorTheme[] = ['default', 'ocean', 'forest', 'midnight', 'sunset', 'monochrome'];
     if (stored && valid.includes(stored as ColorTheme)) return stored as ColorTheme;
     return 'default';
   } catch {

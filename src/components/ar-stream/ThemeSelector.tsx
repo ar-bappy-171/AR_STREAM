@@ -44,6 +44,12 @@ const THEME_OPTIONS: ThemeOption[] = [
     color: 'oklch(0.65 0.25 10)',
     description: 'Warm pink/rose tones',
   },
+  {
+    id: 'monochrome',
+    name: 'Monochrome',
+    color: 'oklch(0.5 0 0)',
+    description: 'Pure black & white',
+  },
 ];
 
 function applyThemeToDocument(theme: ColorTheme) {
