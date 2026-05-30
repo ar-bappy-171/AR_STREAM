@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="500" height="750" viewBox="0 0 500 750">
+  <rect width="500" height="750" fill="#1a1a2e"/>
+  <g transform="translate(250,375)">
+    <circle r="40" fill="none" stroke="#e94560" stroke-width="3"/>
+    <polygon points="-15,-20 -15,20 20,0" fill="#e94560"/>
+  </g>
+  <text x="250" y="440" text-anchor="middle" fill="#555" font-family="Arial" font-size="14">No Poster Available</text>
+</svg>
