@@ -97,3 +97,26 @@ Stage Summary:
 - Dev server compiles successfully
 - Hydration mismatches resolved via proper typeof window guards in useState initializers
 - Side effects removed from render phase (useMemo/useState initializer)
+
+---
+Task ID: 5
+Agent: Main Coordinator
+Task: Fix color theme not working + sidebar not scrollable + integrate OMDb API
+
+Work Log:
+- Fixed CSS selectors: `.dark [data-theme="ocean"]` → `.dark[data-theme="ocean"]` (no space = same element match)
+- Made color themes more impactful: now changes 7+ CSS variables (--ars, --primary, --ring, --sidebar-primary, --chart-1, --chart-5)
+- Added both light and dark mode specific overrides for each theme
+- Fixed ThemeSelector: added useEffect for applying data-theme to DOM, added theme descriptions, color dot indicator
+- Added inline script in layout.tsx to apply theme before React hydration (prevent flash)
+- Fixed sidebar scrollability: added `min-h-0` to ScrollArea (fixes flexbox min-height: auto preventing scroll)
+- Integrated OMDb API (key: 20ccc009): created proxy route at /api/omdb/[...path]/route.ts
+- Enhanced DetailModal with OMDb ratings section: IMDb, Rotten Tomatoes, Metacritic with colored badges
+- Added OMDb additional info: MPAA Rating (Rated), Awards, Box Office
+- Fixed missing lucide icon: Tomato → Apple (Tomato doesn't exist in lucide-react)
+
+Stage Summary:
+- Color themes now work correctly in both light and dark mode
+- Sidebar is scrollable — lower tabs (Dashboard, Activity, Settings, Live TV) are accessible
+- OMDb API integrated with ratings display in DetailModal
+- Lint clean, page renders 200 OK

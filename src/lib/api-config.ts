@@ -24,6 +24,12 @@ export const API_PROVIDERS = {
     imageBase: '', // Anime images come with full URLs
     apiKey: '', // Jikan is free, no key needed
   },
+  omdb: {
+    name: 'OMDb (Open Movie Database)',
+    baseUrl: 'https://www.omdbapi.com',
+    imageBase: '',
+    apiKey: process.env.OMDB_API_KEY || '20ccc009',
+  },
 } as const;
 
 export type ApiProvider = keyof typeof API_PROVIDERS;

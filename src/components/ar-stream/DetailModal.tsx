@@ -22,6 +22,11 @@ import {
   DollarSign,
   ShoppingCart,
   Loader2,
+  Trophy,
+  Banknote,
+  Shield,
+  ThumbsUp,
+  Apple,
 } from 'lucide-react';
 import {
   Dialog,
@@ -184,6 +189,41 @@ interface TmdbWatchProviders {
   ads?: TmdbProvider[];
 }
 
+// ─── OMDb API Types ─────────────────────────────────────────────────
+
+interface OmdbRating {
+  Source: string;
+  Value: string;
+}
+
+interface OmdbData {
+  Title: string;
+  Year: string;
+  Rated: string;
+  Released: string;
+  Runtime: string;
+  Genre: string;
+  Director: string;
+  Writer: string;
+  Actors: string;
+  Plot: string;
+  Language: string;
+  Country: string;
+  Awards: string;
+  Poster: string;
+  Ratings: OmdbRating[];
+  Metascore: string;
+  imdbRating: string;
+  imdbVotes: string;
+  imdbID: string;
+  Type: string;
+  DVD: string;
+  BoxOffice: string;
+  Production: string;
+  Website: string;
+  Response: string;
+}
+
 // ─── Props ──────────────────────────────────────────────────────────
 
 interface DetailModalProps {
@@ -228,6 +268,10 @@ export function DetailModal({
   const [providersLoading, setProvidersLoading] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState<string>('US');
 
+  // OMDb data state
+  const [omdbData, setOmdbData] = useState<OmdbData | null>(null);
+  const [omdbLoading, setOmdbLoading] = useState(false);
+
   const isLoading = externalLoading || fetching;
 
   // ─── Fetch additional details ───────────────────────────────────
@@ -262,9 +306,13 @@ export function DetailModal({
 
       // Process detail response
       let mergedDetail: ContentDetail = { ...content };
+      let imdbIdFromTmdb: string | undefined;
 
       if (detailRes.status === 'fulfilled' && detailRes.value.ok) {
         const data = await detailRes.value.json();
+
+        // Capture imdb_id for OMDb lookup
+        imdbIdFromTmdb = data.imdb_id;
 
         // Extract per-season episode counts from TMDB
         let seasonsInfo: SeasonInfo[] | undefined;
@@ -368,6 +416,30 @@ export function DetailModal({
         setWatchProviders(null);
       }
 
+      // Fetch OMDb data using imdb_id from the TMDB detail response
+      if (imdbIdFromTmdb) {
+        setOmdbLoading(true);
+        try {
+          const omdbRes = await fetch(`/api/omdb/?i=${imdbIdFromTmdb}`);
+          if (omdbRes.ok) {
+            const omdbResult = await omdbRes.json();
+            if (omdbResult.Response !== 'False') {
+              setOmdbData(omdbResult as OmdbData);
+            } else {
+              setOmdbData(null);
+            }
+          } else {
+            setOmdbData(null);
+          }
+        } catch {
+          setOmdbData(null);
+        } finally {
+          setOmdbLoading(false);
+        }
+      } else {
+        setOmdbData(null);
+      }
+
       setDetail(mergedDetail);
     } catch (err) {
       console.error('Failed to fetch content details:', err);
@@ -390,6 +462,8 @@ export function DetailModal({
       setFetching(false);
       setWatchProviders(null);
       setSelectedCountry('US');
+      setOmdbData(null);
+      setOmdbLoading(false);
     }
   }, [open, content, fetchDetails]);
 
@@ -823,6 +897,133 @@ export function DetailModal({
                       </div>
                     </section>
                   )
+                )}
+
+                {/* ─── OMDb Ratings & Info Section ────────────────────── */}
+                {!isLoading && !omdbLoading && omdbData && displayData && displayData.type !== 'anime' && (
+                  <section>
+                    <h3 className="text-lg font-semibold text-foreground mb-3">Ratings & Awards</h3>
+
+                    {/* Rating Badges */}
+                    <div className="flex flex-wrap gap-3 mb-4">
+                      {/* IMDb Rating */}
+                      {omdbData.imdbRating && omdbData.imdbRating !== 'N/A' && (
+                        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+                          <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
+                          <div>
+                            <p className="text-sm font-bold text-yellow-600 dark:text-yellow-400">{omdbData.imdbRating}</p>
+                            <p className="text-[10px] text-muted-foreground font-medium">IMDb</p>
+                          </div>
+                          {omdbData.imdbVotes && omdbData.imdbVotes !== 'N/A' && (
+                            <span className="text-[10px] text-muted-foreground ml-0.5">({omdbData.imdbVotes})</span>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Rotten Tomatoes */}
+                      {omdbData.Ratings?.some(r => r.Source === 'Rotten Tomatoes') && (() => {
+                        const rt = omdbData.Ratings.find(r => r.Source === 'Rotten Tomatoes');
+                        if (!rt) return null;
+                        const score = parseInt(rt.Value);
+                        const isFresh = score >= 60;
+                        return (
+                          <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${
+                            isFresh ? 'bg-red-500/10 border-red-500/20' : 'bg-green-500/10 border-green-500/20'
+                          }`}>
+                            <Apple className={`h-4 w-4 ${isFresh ? 'text-red-500' : 'text-green-500'}`} />
+                            <div>
+                              <p className={`text-sm font-bold ${isFresh ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+                                {rt.Value}
+                              </p>
+                              <p className="text-[10px] text-muted-foreground font-medium">Rotten Tomatoes</p>
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      {/* Metacritic */}
+                      {omdbData.Metascore && omdbData.Metascore !== 'N/A' && (() => {
+                        const score = parseInt(omdbData.Metascore);
+                        let colorClass: string;
+                        let bgColorClass: string;
+                        let borderColorClass: string;
+                        if (score >= 61) {
+                          colorClass = 'text-emerald-600 dark:text-emerald-400';
+                          bgColorClass = 'bg-emerald-500/10';
+                          borderColorClass = 'border-emerald-500/20';
+                        } else if (score >= 40) {
+                          colorClass = 'text-amber-600 dark:text-amber-400';
+                          bgColorClass = 'bg-amber-500/10';
+                          borderColorClass = 'border-amber-500/20';
+                        } else {
+                          colorClass = 'text-red-600 dark:text-red-400';
+                          bgColorClass = 'bg-red-500/10';
+                          borderColorClass = 'border-red-500/20';
+                        }
+                        return (
+                          <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${bgColorClass} ${borderColorClass}`}>
+                            <ThumbsUp className={`h-4 w-4 ${colorClass}`} />
+                            <div>
+                              <p className={`text-sm font-bold ${colorClass}`}>{omdbData.Metascore}</p>
+                              <p className="text-[10px] text-muted-foreground font-medium">Metacritic</p>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+
+                    {/* OMDb Additional Info Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {/* Rated (MPAA) */}
+                      {omdbData.Rated && omdbData.Rated !== 'N/A' && (
+                        <div className="flex items-center gap-2">
+                          <Shield className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          <div>
+                            <span className="text-xs font-medium uppercase text-muted-foreground tracking-wider">Rated</span>
+                            <p className="text-sm text-foreground font-medium">{omdbData.Rated}</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Awards */}
+                      {omdbData.Awards && omdbData.Awards !== 'N/A' && (
+                        <div className="flex items-start gap-2 sm:col-span-2">
+                          <Trophy className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <span className="text-xs font-medium uppercase text-muted-foreground tracking-wider">Awards</span>
+                            <p className="text-sm text-foreground font-medium">{omdbData.Awards}</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Box Office */}
+                      {omdbData.BoxOffice && omdbData.BoxOffice !== 'N/A' && (
+                        <div className="flex items-center gap-2">
+                          <Banknote className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+                          <div>
+                            <span className="text-xs font-medium uppercase text-muted-foreground tracking-wider">Box Office</span>
+                            <p className="text-sm text-foreground font-medium">{omdbData.BoxOffice}</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </section>
+                )}
+
+                {/* OMDb Loading Skeleton */}
+                {!isLoading && omdbLoading && displayData && displayData.type !== 'anime' && (
+                  <section>
+                    <Skeleton className="h-5 w-32 rounded mb-3" />
+                    <div className="flex gap-3 mb-4">
+                      <Skeleton className="h-[52px] w-[120px] rounded-lg" />
+                      <Skeleton className="h-[52px] w-[140px] rounded-lg" />
+                      <Skeleton className="h-[52px] w-[110px] rounded-lg" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Skeleton className="h-10 w-24 rounded" />
+                      <Skeleton className="h-10 w-32 rounded" />
+                    </div>
+                  </section>
                 )}
 
                 {/* ─── Episode Tracker (TV & Anime only) ──────────────── */}
