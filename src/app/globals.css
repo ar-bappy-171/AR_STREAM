@@ -119,81 +119,167 @@
 }
 
 /* ─── Color Themes (layer on top of light/dark) ────────────────────── */
+/* NOTE: data-theme and class="dark" are on the SAME <html> element,
+   so we must use combined selectors like .dark[data-theme="X"] (no space). */
 
-/* Ocean Blue — cool blue tones */
-[data-theme="ocean"] {
-  --ars: oklch(0.6 0.2 240);
-  --ars-foreground: oklch(0.985 0 0);
-}
-[data-theme="ocean"] .sidebar-item-active {
-  background: oklch(0.6 0.2 240 / 15%);
-  border-right: 3px solid oklch(0.6 0.2 240);
-}
-:root:not(.dark) [data-theme="ocean"] .content-card:hover {
-  box-shadow: 0 8px 30px oklch(0.6 0.2 240 / 15%);
-}
-.dark [data-theme="ocean"] .content-card:hover {
-  box-shadow: 0 8px 40px oklch(0.6 0.2 240 / 20%);
-}
-.dark [data-theme="ocean"] {
-  --sidebar-primary: oklch(0.6 0.2 240);
-}
+/* ┄┄┄ Ocean Blue ┄┄ cool blue tones ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄ */
 
-/* Forest Green — nature green tones */
-[data-theme="forest"] {
-  --ars: oklch(0.6 0.2 150);
+/* Light mode overrides */
+:root:not(.dark)[data-theme="ocean"] {
+  --ars: oklch(0.55 0.2 240);
   --ars-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.45 0.2 240);
+  --primary-foreground: oklch(0.985 0 0);
+  --ring: oklch(0.55 0.2 240);
+  --sidebar-primary: oklch(0.45 0.2 240);
+  --chart-1: oklch(0.55 0.2 240);
+  --chart-5: oklch(0.65 0.15 220);
 }
-[data-theme="forest"] .sidebar-item-active {
-  background: oklch(0.6 0.2 150 / 15%);
-  border-right: 3px solid oklch(0.6 0.2 150);
+:root:not(.dark)[data-theme="ocean"] .sidebar-item-active {
+  background: oklch(0.55 0.2 240 / 12%);
+  border-right-color: oklch(0.55 0.2 240);
 }
-:root:not(.dark) [data-theme="forest"] .content-card:hover {
-  box-shadow: 0 8px 30px oklch(0.6 0.2 150 / 15%);
-}
-.dark [data-theme="forest"] .content-card:hover {
-  box-shadow: 0 8px 40px oklch(0.6 0.2 150 / 20%);
-}
-.dark [data-theme="forest"] {
-  --sidebar-primary: oklch(0.6 0.2 150);
+:root:not(.dark)[data-theme="ocean"] .content-card:hover {
+  box-shadow: 0 8px 30px oklch(0.55 0.2 240 / 15%);
 }
 
-/* Midnight Purple — deep purple tones */
-[data-theme="midnight"] {
-  --ars: oklch(0.6 0.25 300);
+/* Dark mode overrides */
+.dark[data-theme="ocean"] {
+  --ars: oklch(0.65 0.2 240);
   --ars-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.7 0.18 240);
+  --primary-foreground: oklch(0.12 0.04 240);
+  --ring: oklch(0.65 0.2 240);
+  --sidebar-primary: oklch(0.65 0.2 240);
+  --chart-1: oklch(0.65 0.2 240);
+  --chart-5: oklch(0.55 0.15 220);
 }
-[data-theme="midnight"] .sidebar-item-active {
-  background: oklch(0.6 0.25 300 / 15%);
-  border-right: 3px solid oklch(0.6 0.25 300);
+.dark[data-theme="ocean"] .sidebar-item-active {
+  background: oklch(0.65 0.2 240 / 18%);
+  border-right-color: oklch(0.65 0.2 240);
 }
-:root:not(.dark) [data-theme="midnight"] .content-card:hover {
-  box-shadow: 0 8px 30px oklch(0.6 0.25 300 / 15%);
-}
-.dark [data-theme="midnight"] .content-card:hover {
-  box-shadow: 0 8px 40px oklch(0.6 0.25 300 / 20%);
-}
-.dark [data-theme="midnight"] {
-  --sidebar-primary: oklch(0.6 0.25 300);
+.dark[data-theme="ocean"] .content-card:hover {
+  box-shadow: 0 8px 40px oklch(0.65 0.2 240 / 22%);
 }
 
-/* Sunset Rose — warm pink/rose tones */
-[data-theme="sunset"] {
-  --ars: oklch(0.65 0.25 10);
+/* ┄┄┄ Forest Green ┄┄ nature green tones ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄ */
+
+/* Light mode overrides */
+:root:not(.dark)[data-theme="forest"] {
+  --ars: oklch(0.55 0.2 150);
   --ars-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.45 0.2 150);
+  --primary-foreground: oklch(0.985 0 0);
+  --ring: oklch(0.55 0.2 150);
+  --sidebar-primary: oklch(0.45 0.2 150);
+  --chart-1: oklch(0.55 0.2 150);
+  --chart-5: oklch(0.65 0.15 170);
 }
-[data-theme="sunset"] .sidebar-item-active {
-  background: oklch(0.65 0.25 10 / 15%);
-  border-right: 3px solid oklch(0.65 0.25 10);
+:root:not(.dark)[data-theme="forest"] .sidebar-item-active {
+  background: oklch(0.55 0.2 150 / 12%);
+  border-right-color: oklch(0.55 0.2 150);
 }
-:root:not(.dark) [data-theme="sunset"] .content-card:hover {
-  box-shadow: 0 8px 30px oklch(0.65 0.25 10 / 15%);
+:root:not(.dark)[data-theme="forest"] .content-card:hover {
+  box-shadow: 0 8px 30px oklch(0.55 0.2 150 / 15%);
 }
-.dark [data-theme="sunset"] .content-card:hover {
-  box-shadow: 0 8px 40px oklch(0.65 0.25 10 / 20%);
+
+/* Dark mode overrides */
+.dark[data-theme="forest"] {
+  --ars: oklch(0.65 0.2 150);
+  --ars-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.7 0.18 150);
+  --primary-foreground: oklch(0.12 0.04 150);
+  --ring: oklch(0.65 0.2 150);
+  --sidebar-primary: oklch(0.65 0.2 150);
+  --chart-1: oklch(0.65 0.2 150);
+  --chart-5: oklch(0.55 0.15 170);
 }
-.dark [data-theme="sunset"] {
-  --sidebar-primary: oklch(0.65 0.25 10);
+.dark[data-theme="forest"] .sidebar-item-active {
+  background: oklch(0.65 0.2 150 / 18%);
+  border-right-color: oklch(0.65 0.2 150);
+}
+.dark[data-theme="forest"] .content-card:hover {
+  box-shadow: 0 8px 40px oklch(0.65 0.2 150 / 22%);
+}
+
+/* ┄┄┄ Midnight Purple ┄┄ deep purple tones ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄ */
+
+/* Light mode overrides */
+:root:not(.dark)[data-theme="midnight"] {
+  --ars: oklch(0.55 0.25 300);
+  --ars-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.45 0.25 300);
+  --primary-foreground: oklch(0.985 0 0);
+  --ring: oklch(0.55 0.25 300);
+  --sidebar-primary: oklch(0.45 0.25 300);
+  --chart-1: oklch(0.55 0.25 300);
+  --chart-5: oklch(0.65 0.2 320);
+}
+:root:not(.dark)[data-theme="midnight"] .sidebar-item-active {
+  background: oklch(0.55 0.25 300 / 12%);
+  border-right-color: oklch(0.55 0.25 300);
+}
+:root:not(.dark)[data-theme="midnight"] .content-card:hover {
+  box-shadow: 0 8px 30px oklch(0.55 0.25 300 / 15%);
+}
+
+/* Dark mode overrides */
+.dark[data-theme="midnight"] {
+  --ars: oklch(0.65 0.25 300);
+  --ars-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.7 0.22 300);
+  --primary-foreground: oklch(0.12 0.05 300);
+  --ring: oklch(0.65 0.25 300);
+  --sidebar-primary: oklch(0.65 0.25 300);
+  --chart-1: oklch(0.65 0.25 300);
+  --chart-5: oklch(0.55 0.2 320);
+}
+.dark[data-theme="midnight"] .sidebar-item-active {
+  background: oklch(0.65 0.25 300 / 18%);
+  border-right-color: oklch(0.65 0.25 300);
+}
+.dark[data-theme="midnight"] .content-card:hover {
+  box-shadow: 0 8px 40px oklch(0.65 0.25 300 / 22%);
+}
+
+/* ┄┄┄ Sunset Rose ┄┄ warm pink/rose tones ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄ */
+
+/* Light mode overrides */
+:root:not(.dark)[data-theme="sunset"] {
+  --ars: oklch(0.6 0.25 10);
+  --ars-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.5 0.25 10);
+  --primary-foreground: oklch(0.985 0 0);
+  --ring: oklch(0.6 0.25 10);
+  --sidebar-primary: oklch(0.5 0.25 10);
+  --chart-1: oklch(0.6 0.25 10);
+  --chart-5: oklch(0.65 0.2 30);
+}
+:root:not(.dark)[data-theme="sunset"] .sidebar-item-active {
+  background: oklch(0.6 0.25 10 / 12%);
+  border-right-color: oklch(0.6 0.25 10);
+}
+:root:not(.dark)[data-theme="sunset"] .content-card:hover {
+  box-shadow: 0 8px 30px oklch(0.6 0.25 10 / 15%);
+}
+
+/* Dark mode overrides */
+.dark[data-theme="sunset"] {
+  --ars: oklch(0.7 0.25 10);
+  --ars-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.75 0.22 10);
+  --primary-foreground: oklch(0.12 0.05 10);
+  --ring: oklch(0.7 0.25 10);
+  --sidebar-primary: oklch(0.7 0.25 10);
+  --chart-1: oklch(0.7 0.25 10);
+  --chart-5: oklch(0.6 0.2 30);
+}
+.dark[data-theme="sunset"] .sidebar-item-active {
+  background: oklch(0.7 0.25 10 / 18%);
+  border-right-color: oklch(0.7 0.25 10);
+}
+.dark[data-theme="sunset"] .content-card:hover {
+  box-shadow: 0 8px 40px oklch(0.7 0.25 10 / 22%);
 }
 
 @layer base {

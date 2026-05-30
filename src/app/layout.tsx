@@ -39,6 +39,12 @@ export default function RootLayout({
       <head>
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#e85d04" />
+        {/* Apply color theme BEFORE React hydration to prevent flash */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('ar-stream-color-theme');if(t&&t!=='default'){document.documentElement.setAttribute('data-theme',t)}}catch(e){}})()`,
+          }}
+        />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
