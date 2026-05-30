@@ -20,7 +20,6 @@ import {
   DialogContent,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -357,7 +356,7 @@ export function DetailModal({
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <DialogContent
         className="slide-up p-0 gap-0 max-w-4xl w-[calc(100%-1rem)] sm:w-[calc(100%-2rem)] 
-          max-h-[95vh] sm:max-h-[90vh] overflow-hidden rounded-xl border-border/50
+          max-h-[95vh] sm:max-h-[90vh] overflow-y-auto rounded-xl border-border/50
           bg-background/95 backdrop-blur-xl"
         showCloseButton={false}
       >
@@ -365,8 +364,7 @@ export function DetailModal({
           {displayData?.title ?? 'Content Details'}
         </DialogTitle>
 
-        <ScrollArea className="max-h-[95vh] sm:max-h-[90vh]">
-          <div className="relative">
+        <div className="relative">
             {/* ─── Close Button ──────────────────────────────────── */}
             <button
               onClick={onClose}
@@ -816,7 +814,6 @@ export function DetailModal({
               {isLoading && <SimilarSkeleton />}
             </div>
           </div>
-        </ScrollArea>
       </DialogContent>
     </Dialog>
   );

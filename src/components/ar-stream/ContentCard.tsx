@@ -67,7 +67,7 @@ export function ContentCard({ item, onClick, onFavoriteToggle, isFavorite }: Con
 
   return (
     <div
-      className="content-card group relative w-[155px] sm:w-[170px] md:w-[185px] cursor-pointer rounded-lg overflow-hidden bg-card"
+      className="content-card group relative w-[155px] sm:w-[170px] md:w-[185px] flex-shrink-0 cursor-pointer rounded-lg overflow-hidden bg-card"
       onClick={handleClick}
     >
       {/* Poster */}
@@ -144,7 +144,7 @@ export function ContentCard({ item, onClick, onFavoriteToggle, isFavorite }: Con
 
 export function ContentCardSkeleton() {
   return (
-    <div className="w-[155px] sm:w-[170px] md:w-[185px] rounded-lg overflow-hidden">
+    <div className="w-[155px] sm:w-[170px] md:w-[185px] flex-shrink-0 rounded-lg overflow-hidden">
       <div className="relative aspect-[2/3] rounded-lg bg-muted skeleton-pulse" />
       <div className="pt-2 pb-1 px-1 space-y-2">
         <div className="h-4 w-3/4 rounded bg-muted skeleton-pulse" />
