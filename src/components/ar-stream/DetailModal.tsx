@@ -33,6 +33,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ContentCard } from '@/components/ar-stream/ContentCard';
 import { PersonModal } from '@/components/ar-stream/PersonModal';
+import EpisodeTracker from '@/components/ar-stream/EpisodeTracker';
 import type { ContentDetail, ContentItem } from '@/lib/store';
 import type { WatchListCategory } from '@/lib/storage';
 
@@ -801,6 +802,41 @@ export function DetailModal({
                             </p>
                           </div>
                         )}
+                      </div>
+                    </section>
+                  )
+                )}
+
+                {/* ─── Episode Tracker (TV & Anime only) ──────────────── */}
+                {!isLoading && displayData && (displayData.type === 'tv' || displayData.type === 'anime') && (
+                  watchListStatus ? (
+                    <section>
+                      <EpisodeTracker
+                        contentId={displayData.id}
+                        contentType={displayData.type}
+                        title={displayData.title}
+                        totalSeasons={displayData.numberOfSeasons || (displayData.type === 'anime' && displayData.episodes ? 1 : undefined)}
+                        totalEpisodes={displayData.numberOfEpisodes || displayData.episodes}
+                        onProgressUpdate={onWatchProgressUpdate}
+                      />
+                    </section>
+                  ) : (
+                    <section>
+                      <div className="bg-card/60 border border-border/50 rounded-xl p-4 flex items-center gap-3">
+                        <Tv className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-foreground">Track your progress</p>
+                          <p className="text-xs text-muted-foreground">Add this to your list to start tracking episodes</p>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1.5 text-xs"
+                          onClick={() => setShowListDropdown(true)}
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                          Add to List
+                        </Button>
                       </div>
                     </section>
                   )

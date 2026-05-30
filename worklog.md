@@ -25,3 +25,23 @@ Stage Summary:
 - Storage.ts had conflicts from parallel subagents - fixed by adding missing functions manually
 - Key new files: WatchListSection, AIRecommendations, EpisodeTracker, TrailerPreview, PersonModal, ParentalControls, DashboardSection, ActivityTimeline, ExportImportSection, ThemeSelector, InstallPrompt, PiPPlayer
 - Sidebar now has: Home, All Content, Continue Watching, My Lists, For You, Dashboard, Activity, Settings
+
+---
+Task ID: 2
+Agent: Main Coordinator
+Task: Fix Feature #7 - Season & Episode Tracker not showing in DetailModal
+
+Work Log:
+- Discovered EpisodeTracker component existed at src/components/ar-stream/EpisodeTracker.tsx but was never imported or rendered
+- Storage functions (getWatchProgress, updateWatchProgress, updateWatchTotals) were already in place
+- Added import for EpisodeTracker in DetailModal.tsx
+- Added EpisodeTracker rendering in the content body section (after Details Grid, before Where to Watch)
+- Tracker only shows for TV/anime content types (movies return null from EpisodeTracker)
+- Added smart UX: when content is TV/anime but NOT in watchlist, shows a "Track your progress" prompt with "Add to List" button
+- When content IS in watchlist, shows full EpisodeTracker with season/episode steppers, progress bar, and quick actions
+- Handled anime case: uses episodes field as totalEpisodes with 1 season as fallback
+
+Stage Summary:
+- EpisodeTracker now visible inside DetailModal for TV/anime content
+- Smart prompt shown when not in watchlist, full tracker when in list
+- Lint clean, compilation successful
