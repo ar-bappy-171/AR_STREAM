@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAppStore } from '@/lib/store';
 import ThemeSelector from '@/components/ar-stream/ThemeSelector';
+import SearchAutocomplete from '@/components/ar-stream/SearchAutocomplete';
 
 export default function Header() {
   const {
@@ -20,6 +21,7 @@ export default function Header() {
 
   const { theme, setTheme } = useTheme();
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [searchFocused, setSearchFocused] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const handleSearch = useCallback(() => {
@@ -36,6 +38,14 @@ export default function Header() {
       if (e.key === 'Enter') {
         handleSearch();
       }
+      // Forward arrow keys and Escape to autocomplete
+      if (['ArrowDown', 'ArrowUp', 'Escape'].includes(e.key)) {
+        const event = new CustomEvent('autocomplete-keydown', { detail: e });
+        window.dispatchEvent(event);
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+          e.preventDefault();
+        }
+      }
     },
     [handleSearch]
   );
@@ -44,6 +54,7 @@ export default function Header() {
     // On mobile, first open the search bar
     if (!mobileSearchOpen) {
       setMobileSearchOpen(true);
+      setSearchFocused(true);
       setTimeout(() => searchInputRef.current?.focus(), 100);
       return;
     }
@@ -52,11 +63,16 @@ export default function Header() {
 
   const handleClearSearch = useCallback(() => {
     setSearchQuery('');
+    setSearchFocused(false);
     if (activeSection === 'search') {
       setActiveSection('home');
     }
     setMobileSearchOpen(false);
   }, [activeSection, setActiveSection, setSearchQuery]);
+
+  const handleAutocompleteClose = useCallback(() => {
+    setSearchFocused(false);
+  }, []);
 
   const toggleTheme = useCallback(() => {
     setTheme(theme === 'dark' ? 'light' : 'dark');
@@ -122,6 +138,7 @@ export default function Header() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={handleKeyDown}
+              onFocus={() => setSearchFocused(true)}
               className="pl-9 pr-9 h-9 w-full rounded-full bg-muted/50 border-transparent focus-visible:border-ars/50 focus-visible:ring-ars/20 transition-all duration-300 placeholder:text-muted-foreground/60"
             />
             {searchQuery && (
@@ -146,6 +163,12 @@ export default function Header() {
                 </svg>
               </button>
             )}
+            {/* Desktop Autocomplete */}
+            <SearchAutocomplete
+              searchQuery={searchQuery}
+              isFocused={searchFocused}
+              onClose={handleAutocompleteClose}
+            />
           </div>
         </div>
 
@@ -202,6 +225,7 @@ export default function Header() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={handleKeyDown}
+              onFocus={() => setSearchFocused(true)}
               autoFocus
               className="pl-9 pr-9 h-9 w-full rounded-full bg-muted/50 border-transparent focus-visible:border-ars/50 focus-visible:ring-ars/20 transition-all duration-300 placeholder:text-muted-foreground/60"
             />
@@ -227,6 +251,12 @@ export default function Header() {
                 </svg>
               </button>
             )}
+            {/* Mobile Autocomplete */}
+            <SearchAutocomplete
+              searchQuery={searchQuery}
+              isFocused={searchFocused}
+              onClose={handleAutocompleteClose}
+            />
           </div>
         </div>
       )}

@@ -37,11 +37,13 @@ import WatchListSection from '@/components/ar-stream/WatchListSection';
 import AllContentSection from '@/components/ar-stream/AllContentSection';
 import Footer from '@/components/ar-stream/Footer';
 import InstallPrompt from '@/components/ar-stream/InstallPrompt';
+import MobileBottomNav from '@/components/ar-stream/MobileBottomNav';
 import PiPPlayer from '@/components/ar-stream/PiPPlayer';
 import DashboardSection from '@/components/ar-stream/DashboardSection';
 import ActivityTimeline from '@/components/ar-stream/ActivityTimeline';
 import ExportImportSection from '@/components/ar-stream/ExportImportSection';
 import { AIRecommendations, FullRecommendationsSection } from '@/components/ar-stream/AIRecommendations';
+import PageTransition from '@/components/ar-stream/PageTransition';
 
 // ─── TMDB Result Mapper ──────────────────────────────────────────────
 function mapTmdbResult(item: Record<string, unknown>, type: 'movie' | 'tv'): ContentItem {
@@ -683,13 +685,15 @@ export default function Home() {
       {/* Main Content Area */}
       <main
         ref={mainRef}
-        className={`flex-1 ${mainMarginLeft} transition-all duration-300 pt-4 pb-8`}
+        className={`flex-1 ${mainMarginLeft} transition-all duration-300 pt-4 pb-20 md:pb-8`}
         style={{ minHeight: 'calc(100vh - 56px)' }}
       >
         <div className="flex flex-col min-h-full">
           {/* Content */}
           <div className="flex-1">
-            {renderContent()}
+            <PageTransition sectionKey={activeSection}>
+              {renderContent()}
+            </PageTransition>
           </div>
 
           {/* Footer */}
@@ -720,6 +724,9 @@ export default function Home() {
 
       {/* PWA Install Prompt */}
       <InstallPrompt />
+
+      {/* Mobile Bottom Navigation */}
+      <MobileBottomNav />
     </div>
   );
 }

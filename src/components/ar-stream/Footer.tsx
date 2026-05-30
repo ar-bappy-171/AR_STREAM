@@ -4,7 +4,7 @@ import { Play, ExternalLink, Mail, Github, Twitter, MessageCircle } from 'lucide
 
 export default function Footer() {
   return (
-    <footer className="mt-auto w-full border-t border-border/40 bg-card/60 backdrop-blur-sm">
+    <footer className="mt-auto w-full border-t border-border/40 bg-card/60 backdrop-blur-sm mb-16 md:mb-0">
       <div className="px-4 sm:px-6 lg:px-8 py-8">
         {/* Top Section */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import {
   BarChart3,
@@ -14,6 +14,7 @@ import {
   TrendingUp,
   Trophy,
   CheckCircle,
+  Palette,
 } from 'lucide-react';
 import {
   getWatchList,
@@ -22,7 +23,9 @@ import {
   type WatchListItem,
   type ActivityEntry,
 } from '@/lib/storage';
+import { useAppStore } from '@/lib/store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import GenreBreakdownChart from './GenreBreakdownChart';
 
 const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p/w500';
 
@@ -385,6 +388,9 @@ export default function DashboardSection() {
   const [continueWatchingItems, setContinueWatchingItems] = useState<ReturnType<typeof getContinueWatching>>([]);
   const [activityLog, setActivityLog] = useState<ReturnType<typeof getActivityLog>>([]);
 
+  // Access sectionData from Zustand store for genre IDs
+  const sectionData = useAppStore((s) => s.sectionData);
+
   // Load client-only data after mount to avoid hydration mismatch
   useEffect(() => {
     setWatchListItems(getWatchList()); // eslint-disable-line react-hooks/set-state-in-effect
@@ -472,7 +478,21 @@ export default function DashboardSection() {
 
       {/* Charts Row */}
       <div className="px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-        {/* Genre Breakdown */}
+        {/* Taste Profile - Genre Breakdown Pie Chart */}
+        <Card className="border-border/50 bg-card/80">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <Palette className="size-4 text-ars" />
+              Taste Profile
+              <span className="text-muted-foreground font-normal text-xs">Your genre preferences</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <GenreBreakdownChart items={watchListItems} sectionData={sectionData} />
+          </CardContent>
+        </Card>
+
+        {/* Content Breakdown */}
         <Card className="border-border/50 bg-card/80">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
@@ -484,8 +504,10 @@ export default function DashboardSection() {
             <GenreBarChart items={watchListItems} />
           </CardContent>
         </Card>
+      </div>
 
-        {/* Content Type Distribution */}
+      {/* Content Type Distribution - Full Width */}
+      <div className="px-4 sm:px-6 lg:px-8">
         <Card className="border-border/50 bg-card/80">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
