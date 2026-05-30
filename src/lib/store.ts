@@ -21,6 +21,8 @@ export interface ContentItem {
   status?: string;
   genres?: { mal_id: number; name: string }[];
   score?: number;
+  // Favorites-specific
+  addedAt?: number;
 }
 
 export interface ContentDetail extends ContentItem {

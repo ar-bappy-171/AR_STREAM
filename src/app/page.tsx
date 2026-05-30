@@ -25,6 +25,7 @@ import { ContentRow } from '@/components/ar-stream/ContentRow';
 import { DetailModal } from '@/components/ar-stream/DetailModal';
 import SearchResults from '@/components/ar-stream/SearchResults';
 import LiveTVSection from '@/components/ar-stream/LiveTVSection';
+import FavoritesSection from '@/components/ar-stream/FavoritesSection';
 import Footer from '@/components/ar-stream/Footer';
 
 // ─── TMDB Result Mapper ──────────────────────────────────────────────
@@ -215,6 +216,7 @@ export default function Home() {
       voteAverage: f.voteAverage,
       voteCount: 0,
       type: f.type,
+      addedAt: f.addedAt,
     }));
   });
   const [continueWatchingItems, setContinueWatchingItems] = useState<ContentItem[]>(() => {
@@ -346,6 +348,7 @@ export default function Home() {
       voteAverage: f.voteAverage,
       voteCount: 0,
       type: f.type,
+      addedAt: f.addedAt,
     })));
   }, [favorites]);
 
@@ -418,33 +421,35 @@ export default function Home() {
     // Favorites view
     if (activeSection === 'favorites') {
       return (
-        <div className="w-full fade-in">
-          <div className="px-4 sm:px-6 lg:px-8 mb-6">
-            <h2 className="text-xl sm:text-2xl font-bold text-foreground">My Favorites</h2>
-            <p className="text-sm text-muted-foreground">Your saved movies, shows, and anime</p>
-          </div>
-          {favoriteItems.length > 0 ? (
-            <ContentRow
-              title="Saved Items"
-              items={favoriteItems}
-              onItemClick={handleItemClick}
-              onFavoriteToggle={handleFavoriteToggle}
-              favorites={favorites}
-            />
-          ) : (
-            <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
-              <div className="size-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
-                <svg className="size-8 text-muted-foreground/50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-semibold text-foreground mb-2">No Favorites Yet</h3>
-              <p className="text-sm text-muted-foreground max-w-md">
-                Click the heart icon on any movie, TV show, or anime to save it here.
-              </p>
-            </div>
-          )}
-        </div>
+        <FavoritesSection
+          items={favoriteItems}
+          onItemClick={handleItemClick}
+          onFavoriteToggle={handleFavoriteToggle}
+          favorites={favorites}
+          onRemoveFavorite={(id, type) => {
+            removeFromFavorites(id, type);
+            const key = `${type}-${id}`;
+            setFavorites(prev => {
+              const next = new Set(prev);
+              next.delete(key);
+              return next;
+            });
+            // Refresh favorites items
+            const favs = getFavorites();
+            setFavoriteItems(favs.map(f => ({
+              id: f.id,
+              title: f.title,
+              overview: f.overview,
+              posterPath: f.posterPath,
+              backdropPath: null,
+              releaseDate: f.releaseDate,
+              voteAverage: f.voteAverage,
+              voteCount: 0,
+              type: f.type,
+              addedAt: f.addedAt,
+            })));
+          }}
+        />
       );
     }
 
