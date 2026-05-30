@@ -355,16 +355,16 @@ export function DetailModal({
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <DialogContent
-        className="slide-up p-0 gap-0 max-w-4xl w-[calc(100%-1rem)] sm:w-[calc(100%-2rem)] 
-          max-h-[95vh] sm:max-h-[90vh] overflow-y-auto rounded-xl border-border/50
-          bg-background/95 backdrop-blur-xl"
+        className="slide-up p-0 gap-0 max-w-5xl sm:max-w-5xl w-full sm:w-[95vw]
+          h-[95vh] sm:h-[92vh] rounded-xl border-border/50
+          bg-background/95 backdrop-blur-xl flex flex-col overflow-hidden"
         showCloseButton={false}
       >
         <DialogTitle className="sr-only">
           {displayData?.title ?? 'Content Details'}
         </DialogTitle>
 
-        <div className="relative">
+        <div className="relative flex-1 overflow-y-auto overscroll-contain">
             {/* ─── Close Button ──────────────────────────────────── */}
             <button
               onClick={onClose}
