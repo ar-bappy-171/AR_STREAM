@@ -41,13 +41,15 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        <link rel="icon" type="image/x-icon" href="/favicon.ico?v=3" />
+        <link rel="icon" type="image/svg+xml" href="/logo.svg?v=3" sizes="any" />
         <link rel="manifest" href="/manifest.json" />
-        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=3" />
         <meta name="theme-color" content="#e85d04" />
         {/* Apply color theme BEFORE React hydration to prevent flash */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('ar-stream-color-theme');if(t&&t!=='default'){document.documentElement.setAttribute('data-theme',t)}}catch(e){}})()`,
+            __html: `(function(){try{var t=localStorage.getItem('ar-stream-color-theme');if(t&&t!=='default'){document.documentElement.setAttribute('data-theme',t)}}catch(e){}/* Force favicon refresh */try{var links=document.querySelectorAll('link[rel*="icon"]');links.forEach(function(l){var u=l.href.split('?')[0]+'?v='+Date.now();l.href=u})}catch(e){}})()`,
           }}
         />
       </head>
