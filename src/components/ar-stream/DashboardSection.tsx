@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import {
   BarChart3,
@@ -381,18 +381,16 @@ function RecentlyFinishedList({ items }: { items: WatchListItem[] }) {
 // ─── Main Component ─────────────────────────────────────────────────
 
 export default function DashboardSection() {
-  const [watchListItems] = useState(() => {
-    if (typeof window === 'undefined') return [] as ReturnType<typeof getWatchList>;
-    return getWatchList();
-  });
-  const [continueWatchingItems] = useState(() => {
-    if (typeof window === 'undefined') return [] as ReturnType<typeof getContinueWatching>;
-    return getContinueWatching();
-  });
-  const [activityLog] = useState(() => {
-    if (typeof window === 'undefined') return [] as ReturnType<typeof getActivityLog>;
-    return getActivityLog();
-  });
+  const [watchListItems, setWatchListItems] = useState<ReturnType<typeof getWatchList>>([]);
+  const [continueWatchingItems, setContinueWatchingItems] = useState<ReturnType<typeof getContinueWatching>>([]);
+  const [activityLog, setActivityLog] = useState<ReturnType<typeof getActivityLog>>([]);
+
+  // Load client-only data after mount to avoid hydration mismatch
+  useEffect(() => {
+    setWatchListItems(getWatchList()); // eslint-disable-line react-hooks/set-state-in-effect
+    setContinueWatchingItems(getContinueWatching());
+    setActivityLog(getActivityLog());
+  }, []);
 
   // ─── Computed Stats ──────────────────────────────────────────────
   const totalItems = watchListItems.length;

@@ -263,16 +263,20 @@ export default function Home() {
     setKidsModeEnabled,
   } = useAppStore();
 
-  // Initialize state from localStorage using lazy initializers
-  const [watchListItems, setWatchListItems] = useState<ContentItem[]>(() => {
-    if (typeof window === 'undefined') return [];
+  // Initialize state from localStorage AFTER hydration to prevent mismatch
+  const [watchListItems, setWatchListItems] = useState<ContentItem[]>([]);
+  const [continueWatchingItems, setContinueWatchingItems] = useState<ContentItem[]>([]);
+  const [loadingMoreSections, setLoadingMoreSections] = useState<Record<string, boolean>>({});
+  const [mounted, setMounted] = useState(false);
+  const fetchedSections = useRef<Set<string>>(new Set());
+  const mainRef = useRef<HTMLDivElement>(null);
+
+  // Load client-only data after mount to avoid hydration mismatch
+  useEffect(() => {
     migrateFavoritesToWatchList();
-    return refreshWatchListItems();
-  });
-  const [continueWatchingItems, setContinueWatchingItems] = useState<ContentItem[]>(() => {
-    if (typeof window === 'undefined') return [];
+    setWatchListItems(refreshWatchListItems());
     const cw = getContinueWatching();
-    return cw.map(w => ({
+    setContinueWatchingItems(cw.map(w => ({
       id: w.id,
       title: w.title,
       overview: w.overview || '',
@@ -284,11 +288,9 @@ export default function Home() {
       voteCount: 0,
       type: w.type,
       addedAt: w.timestamp,
-    }));
-  });
-  const [loadingMoreSections, setLoadingMoreSections] = useState<Record<string, boolean>>({});
-  const fetchedSections = useRef<Set<string>>(new Set());
-  const mainRef = useRef<HTMLDivElement>(null);
+    })));
+    setMounted(true);
+  }, []);
 
   // Initialize kids mode from parental settings on mount
   useEffect(() => {
