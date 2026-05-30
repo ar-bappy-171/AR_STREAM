@@ -5,6 +5,7 @@ import { useAppStore, type ContentItem, type ContentDetail } from '@/lib/store';
 import {
   getContinueWatching,
   addToContinueWatching,
+  removeFromContinueWatching,
   getFavorites,
   addToFavorites,
   removeFromFavorites,
@@ -25,7 +26,9 @@ import { ContentRow } from '@/components/ar-stream/ContentRow';
 import { DetailModal } from '@/components/ar-stream/DetailModal';
 import SearchResults from '@/components/ar-stream/SearchResults';
 import LiveTVSection from '@/components/ar-stream/LiveTVSection';
+import ContinueWatchingSection from '@/components/ar-stream/ContinueWatchingSection';
 import FavoritesSection from '@/components/ar-stream/FavoritesSection';
+import AllContentSection from '@/components/ar-stream/AllContentSection';
 import Footer from '@/components/ar-stream/Footer';
 
 // ─── TMDB Result Mapper ──────────────────────────────────────────────
@@ -159,8 +162,8 @@ async function fetchJikanSection(section: SectionConfig): Promise<ContentItem[]>
 // ─── Section Mapping ─────────────────────────────────────────────────
 
 function getSectionsForView(activeSection: string): SectionConfig[] {
-  // For home, show all sections
-  if (activeSection === 'home') {
+  // For home and all-content, show all sections
+  if (activeSection === 'home' || activeSection === 'all-content') {
     return [
       ...HOME_SECTIONS,
       ...GENRE_SECTIONS,
@@ -225,13 +228,15 @@ export default function Home() {
     return cw.map(w => ({
       id: w.id,
       title: w.title,
-      overview: '',
+      overview: w.overview || '',
+      originalTitle: w.originalTitle,
       posterPath: w.posterPath,
       backdropPath: null,
-      releaseDate: '',
-      voteAverage: 0,
+      releaseDate: w.releaseDate || '',
+      voteAverage: w.voteAverage || 0,
       voteCount: 0,
       type: w.type,
+      addedAt: w.timestamp,
     }));
   });
   const fetchedSections = useRef<Set<string>>(new Set());
@@ -292,6 +297,10 @@ export default function Home() {
       posterPath: item.posterPath,
       type: item.type,
       timestamp: Date.now(),
+      overview: item.overview,
+      voteAverage: item.voteAverage,
+      releaseDate: item.releaseDate,
+      originalTitle: item.originalTitle,
     });
 
     // Update local continue watching state
@@ -299,13 +308,15 @@ export default function Home() {
     setContinueWatchingItems(cw.map(w => ({
       id: w.id,
       title: w.title,
-      overview: '',
+      overview: w.overview || '',
+      originalTitle: w.originalTitle,
       posterPath: w.posterPath,
       backdropPath: null,
-      releaseDate: '',
-      voteAverage: 0,
+      releaseDate: w.releaseDate || '',
+      voteAverage: w.voteAverage || 0,
       voteCount: 0,
       type: w.type,
+      addedAt: w.timestamp,
     })));
   }, [setSelectedContent, setDetailModalOpen]);
 
@@ -388,33 +399,35 @@ export default function Home() {
     // Continue Watching view
     if (activeSection === 'continue-watching') {
       return (
-        <div className="w-full fade-in">
-          <div className="px-4 sm:px-6 lg:px-8 mb-6">
-            <h2 className="text-xl sm:text-2xl font-bold text-foreground">Continue Watching</h2>
-            <p className="text-sm text-muted-foreground">Pick up where you left off</p>
-          </div>
-          {continueWatchingItems.length > 0 ? (
-            <ContentRow
-              title="Recently Viewed"
-              items={continueWatchingItems}
-              onItemClick={handleItemClick}
-              onFavoriteToggle={handleFavoriteToggle}
-              favorites={favorites}
-            />
-          ) : (
-            <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
-              <div className="size-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
-                <svg className="size-8 text-muted-foreground/50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-semibold text-foreground mb-2">No Watch History</h3>
-              <p className="text-sm text-muted-foreground max-w-md">
-                Start watching movies, TV shows, or anime to see them here.
-              </p>
-            </div>
-          )}
-        </div>
+        <ContinueWatchingSection
+          items={continueWatchingItems}
+          onItemClick={handleItemClick}
+          onFavoriteToggle={handleFavoriteToggle}
+          favorites={favorites}
+          onRemoveItem={(id, type) => {
+            removeFromContinueWatching(id, type);
+            const cw = getContinueWatching();
+            setContinueWatchingItems(cw.map(w => ({
+              id: w.id,
+              title: w.title,
+              overview: w.overview || '',
+              originalTitle: w.originalTitle,
+              posterPath: w.posterPath,
+              backdropPath: null,
+              releaseDate: w.releaseDate || '',
+              voteAverage: w.voteAverage || 0,
+              voteCount: 0,
+              type: w.type,
+              addedAt: w.timestamp,
+            })));
+          }}
+          onClearAll={() => {
+            if (typeof window !== 'undefined') {
+              localStorage.removeItem('ar-stream-continue-watching');
+              setContinueWatchingItems([]);
+            }
+          }}
+        />
       );
     }
 
@@ -449,6 +462,32 @@ export default function Home() {
               addedAt: f.addedAt,
             })));
           }}
+        />
+      );
+    }
+
+    // All Content view
+    if (activeSection === 'all-content') {
+      // Aggregate all section data, deduplicate by type-id
+      const allItemsMap = new Map<string, ContentItem>();
+      Object.values(sectionData).forEach(sectionItems => {
+        sectionItems.forEach(item => {
+          const key = `${item.type}-${item.id}`;
+          if (!allItemsMap.has(key)) {
+            allItemsMap.set(key, item);
+          }
+        });
+      });
+      const allItems = Array.from(allItemsMap.values());
+      const isLoading = Object.values(sectionLoading).some(v => v) && allItems.length === 0;
+
+      return (
+        <AllContentSection
+          items={allItems}
+          loading={isLoading}
+          onItemClick={handleItemClick}
+          onFavoriteToggle={handleFavoriteToggle}
+          favorites={favorites}
         />
       );
     }

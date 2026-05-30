@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 
 export type ContentType = 'movie' | 'tv' | 'anime';
-export type ActiveSection = 'home' | 'search' | 'live-tv' | 'favorites' | 'continue-watching' | string;
+export type ActiveSection = 'home' | 'search' | 'live-tv' | 'favorites' | 'continue-watching' | 'all-content' | string;
 
 export interface ContentItem {
   id: number;

@@ -10,6 +10,10 @@ export interface WatchItem {
   type: 'movie' | 'tv' | 'anime';
   timestamp: number;
   progress?: number;
+  overview?: string;
+  voteAverage?: number;
+  releaseDate?: string;
+  originalTitle?: string;
 }
 
 export interface FavoriteItem {

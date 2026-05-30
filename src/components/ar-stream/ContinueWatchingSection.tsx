@@ -4,7 +4,7 @@ import { useState, useMemo, useCallback } from 'react';
 import Image from 'next/image';
 import {
   Search,
-  Heart,
+  Clock,
   Film,
   Tv,
   Sparkles,
@@ -15,13 +15,12 @@ import {
   LayoutList,
   Star,
   Calendar,
-  Clock,
+  History,
 } from 'lucide-react';
 import type { ContentItem } from '@/lib/store';
-import { ContentCard, ContentCardSkeleton } from './ContentCard';
+import { ContentCard } from './ContentCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 // ─── Types ──────────────────────────────────────────────────────────
@@ -30,12 +29,13 @@ type FilterTab = 'all' | 'movies' | 'tv' | 'anime';
 type SortOption = 'recent' | 'oldest' | 'name-az' | 'name-za' | 'rating-high' | 'rating-low' | 'year-new' | 'year-old';
 type ViewMode = 'grid' | 'list';
 
-interface FavoritesSectionProps {
+interface ContinueWatchingSectionProps {
   items: ContentItem[];
   onItemClick: (item: ContentItem) => void;
   onFavoriteToggle: (item: ContentItem) => void;
   favorites: Set<string>;
-  onRemoveFavorite: (id: number, type: string) => void;
+  onRemoveItem: (id: number, type: string) => void;
+  onClearAll: () => void;
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────
@@ -82,8 +82,8 @@ function getTypeIcon(type: ContentItem['type']) {
 
 function getSortLabel(sort: SortOption): string {
   const labels: Record<SortOption, string> = {
-    'recent': 'Recently Added',
-    'oldest': 'Oldest First',
+    'recent': 'Most Recent',
+    'oldest': 'Oldest Viewed',
     'name-az': 'Name A → Z',
     'name-za': 'Name Z → A',
     'rating-high': 'Rating ↑',
@@ -111,19 +111,19 @@ function getRelativeTime(timestamp: number): string {
 
 // ─── Stats Bar ──────────────────────────────────────────────────────
 
-function StatsBar({ items }: { items: ContentItem[] }) {
+function ContinueWatchingStatsBar({ items }: { items: ContentItem[] }) {
   const movies = items.filter(i => i.type === 'movie').length;
   const tvShows = items.filter(i => i.type === 'tv').length;
   const anime = items.filter(i => i.type === 'anime').length;
   const avgRating = items.length > 0
-    ? (items.reduce((sum, i) => sum + i.voteAverage, 0) / items.length).toFixed(1)
+    ? (items.reduce((sum, i) => sum + (i.voteAverage || 0), 0) / items.filter(i => i.voteAverage > 0).length || 0).toFixed(1)
     : '0.0';
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
       <div className="bg-card/80 border border-border/50 rounded-lg p-3 text-center">
         <p className="text-2xl font-bold text-foreground">{items.length}</p>
-        <p className="text-xs text-muted-foreground">Total Saved</p>
+        <p className="text-xs text-muted-foreground">Total Viewed</p>
       </div>
       <div className="bg-card/80 border border-border/50 rounded-lg p-3 text-center">
         <div className="flex items-center justify-center gap-1.5">
@@ -141,7 +141,7 @@ function StatsBar({ items }: { items: ContentItem[] }) {
         <p className="text-2xl font-bold text-foreground">
           {items.length > 0 ? getRelativeTime(Math.max(...items.map(i => i.addedAt || 0))) : '—'}
         </p>
-        <p className="text-xs text-muted-foreground">Last Added</p>
+        <p className="text-xs text-muted-foreground">Last Viewed</p>
       </div>
     </div>
   );
@@ -149,13 +149,14 @@ function StatsBar({ items }: { items: ContentItem[] }) {
 
 // ─── Component ──────────────────────────────────────────────────────
 
-export default function FavoritesSection({
+export default function ContinueWatchingSection({
   items,
   onItemClick,
   onFavoriteToggle,
   favorites,
-  onRemoveFavorite,
-}: FavoritesSectionProps) {
+  onRemoveItem,
+  onClearAll,
+}: ContinueWatchingSectionProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<FilterTab>('all');
   const [sortBy, setSortBy] = useState<SortOption>('recent');
@@ -194,9 +195,9 @@ export default function FavoritesSection({
         case 'name-za':
           return b.title.localeCompare(a.title);
         case 'rating-high':
-          return b.voteAverage - a.voteAverage;
+          return (b.voteAverage || 0) - (a.voteAverage || 0);
         case 'rating-low':
-          return a.voteAverage - b.voteAverage;
+          return (a.voteAverage || 0) - (b.voteAverage || 0);
         case 'year-new':
           return (b.releaseDate || '').localeCompare(a.releaseDate || '');
         case 'year-old':
@@ -225,29 +226,29 @@ export default function FavoritesSection({
   // Handle clear all
   const handleClearAll = useCallback(() => {
     if (confirmClearAll) {
-      items.forEach(item => onRemoveFavorite(item.id, item.type));
+      onClearAll();
       setConfirmClearAll(false);
     } else {
       setConfirmClearAll(true);
       setTimeout(() => setConfirmClearAll(false), 3000);
     }
-  }, [confirmClearAll, items, onRemoveFavorite]);
+  }, [confirmClearAll, onClearAll]);
 
   // ─── Empty State ────────────────────────────────────────────────
   if (items.length === 0) {
     return (
       <div className="w-full fade-in">
         <div className="px-4 sm:px-6 lg:px-8 mb-6">
-          <h2 className="text-xl sm:text-2xl font-bold text-foreground">My Favorites</h2>
-          <p className="text-sm text-muted-foreground">Your saved movies, shows, and anime</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-foreground">Continue Watching</h2>
+          <p className="text-sm text-muted-foreground">Pick up where you left off</p>
         </div>
         <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
           <div className="size-20 rounded-full bg-ars/10 flex items-center justify-center mb-4">
-            <Heart className="size-10 text-ars/50" />
+            <Clock className="size-10 text-ars/50" />
           </div>
-          <h3 className="text-xl font-semibold text-foreground mb-2">No Favorites Yet</h3>
+          <h3 className="text-xl font-semibold text-foreground mb-2">No Watch History</h3>
           <p className="text-sm text-muted-foreground max-w-md mb-6">
-            Click the <Heart className="inline h-4 w-4 text-red-500" /> heart icon on any movie, TV show, or anime to save it here. Your favorites will appear in this section.
+            Start browsing movies, TV shows, or anime and they&apos;ll appear here so you can pick up where you left off.
           </p>
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
             <span className="flex items-center gap-1"><Film className="h-3.5 w-3.5" /> Movies</span>
@@ -266,10 +267,10 @@ export default function FavoritesSection({
       <div className="px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between mb-2">
           <div>
-            <h2 className="text-xl sm:text-2xl font-bold text-foreground">My Favorites</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-foreground">Continue Watching</h2>
             <p className="text-sm text-muted-foreground">
               {filteredItems.length === items.length
-                ? `${items.length} saved item${items.length !== 1 ? 's' : ''}`
+                ? `${items.length} viewed item${items.length !== 1 ? 's' : ''}`
                 : `${filteredItems.length} of ${items.length} items`
               }
             </p>
@@ -308,7 +309,7 @@ export default function FavoritesSection({
 
       {/* Stats Bar */}
       <div className="px-4 sm:px-6 lg:px-8">
-        <StatsBar items={items} />
+        <ContinueWatchingStatsBar items={items} />
       </div>
 
       {/* Search + Filter + Sort Toolbar */}
@@ -318,7 +319,7 @@ export default function FavoritesSection({
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             type="text"
-            placeholder="Search your favorites by title or overview..."
+            placeholder="Search your watch history by title or overview..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10 pr-10 bg-card/80 border-border/50 focus:border-ars/50"
@@ -339,7 +340,7 @@ export default function FavoritesSection({
           <Tabs value={activeFilter} onValueChange={(v) => setActiveFilter(v as FilterTab)}>
             <TabsList className="bg-muted/50 h-9">
               {([
-                { key: 'all', label: 'All', icon: Heart },
+                { key: 'all', label: 'All', icon: History },
                 { key: 'movies', label: `Movies (${counts.movies})`, icon: Film },
                 { key: 'tv', label: `TV (${counts.tv})`, icon: Tv },
                 { key: 'anime', label: `Anime (${counts.anime})`, icon: Sparkles },
@@ -406,8 +407,8 @@ export default function FavoritesSection({
           <h3 className="text-lg font-semibold text-foreground mb-1">No matches found</h3>
           <p className="text-sm text-muted-foreground max-w-sm">
             {searchQuery
-              ? `No favorites matching "${searchQuery}". Try a different search term.`
-              : `No ${activeFilter === 'all' ? '' : activeFilter === 'movies' ? 'movies' : activeFilter === 'tv' ? 'TV shows' : 'anime'} in your favorites yet.`
+              ? `No items matching "${searchQuery}". Try a different search term.`
+              : `No ${activeFilter === 'all' ? '' : activeFilter === 'movies' ? 'movies' : activeFilter === 'tv' ? 'TV shows' : 'anime'} in your watch history.`
             }
           </p>
           {searchQuery && (
@@ -469,12 +470,18 @@ export default function FavoritesSection({
                         {getTypeLabel(item.type)}
                       </span>
                     </div>
-                    <p className="text-xs text-muted-foreground line-clamp-1">{item.overview}</p>
+                    <p className="text-xs text-muted-foreground line-clamp-1">{item.overview || 'No overview available'}</p>
                     <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                      {item.voteAverage > 0 && (
+                      {item.addedAt && (
+                        <span className="flex items-center gap-0.5">
+                          <Clock className="h-3 w-3" />
+                          {getRelativeTime(item.addedAt)}
+                        </span>
+                      )}
+                      {(item.voteAverage || 0) > 0 && (
                         <span className="flex items-center gap-0.5">
                           <Star className="h-3 w-3 rating-star fill-current" />
-                          {item.voteAverage.toFixed(1)}
+                          {(item.voteAverage || 0).toFixed(1)}
                         </span>
                       )}
                       {item.releaseDate && (
@@ -489,11 +496,11 @@ export default function FavoritesSection({
                   {/* Actions */}
                   <div className="flex items-center gap-1.5 flex-shrink-0">
                     <button
-                      onClick={(e) => { e.stopPropagation(); onFavoriteToggle(item); }}
-                      className="p-1.5 rounded-full bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors"
-                      aria-label="Remove from favorites"
+                      onClick={(e) => { e.stopPropagation(); onRemoveItem(item.id, item.type); }}
+                      className="p-1.5 rounded-full bg-muted/50 text-muted-foreground hover:bg-red-500/10 hover:text-red-500 transition-colors"
+                      aria-label="Remove from history"
                     >
-                      <Heart className="h-4 w-4 fill-red-500" />
+                      <X className="h-4 w-4" />
                     </button>
                   </div>
                 </div>
@@ -507,7 +514,7 @@ export default function FavoritesSection({
       {filteredItems.length > 0 && (
         <div className="px-4 sm:px-6 lg:px-8 pt-2">
           <p className="text-xs text-muted-foreground text-center">
-            Showing {filteredItems.length} of {items.length} favorite{items.length !== 1 ? 's' : ''}
+            Showing {filteredItems.length} of {items.length} item{items.length !== 1 ? 's' : ''}
             {searchQuery && ` · Matching "${searchQuery}"`}
             {activeFilter !== 'all' && ` · Filtered by ${activeFilter}`}
           </p>

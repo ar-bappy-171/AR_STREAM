@@ -5,6 +5,7 @@ import {
   Home,
   Clock,
   Heart,
+  LayoutGrid,
   TrendingUp,
   Star,
   Sparkles,
@@ -59,6 +60,7 @@ const navigationGroups: { title: string; items: NavItem[] }[] = [
     title: 'Navigation',
     items: [
       { id: 'home', label: 'Home', icon: Home, section: 'home' },
+      { id: 'all-content', label: 'All Content', icon: LayoutGrid, section: 'all-content' },
       { id: 'continue-watching', label: 'Continue Watching', icon: Clock, section: 'continue-watching' },
       { id: 'favorites', label: 'Favorites', icon: Heart, section: 'favorites' },
     ],
